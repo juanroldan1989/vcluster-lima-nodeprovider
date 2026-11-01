@@ -63,7 +63,26 @@ Capture real resources created with this repository's [two-tenant example](examp
 
 Exit criterion: readers can visually follow provider setup, two-tenant provisioning, worker readiness, workload placement, scale-up, automatic VM removal and teardown using screenshots from a real run. The views agree on tenant, claim and VM identities and make the project's local autoscaling behavior easy to assess.
 
-## Phase 6 — Experimental release
+## Phase 6 — Linux host support
+
+Make the same NodeProvider lifecycle available to developers using Linux hosts. Lima already supports [Linux installation](https://lima-vm.io/docs/installation/) and uses [QEMU as its default Linux driver](https://lima-vm.io/docs/config/vmtype/qemu/). This project's current implementation still assumes macOS VZ, ARM64 workers and launchd service management.
+
+- [ ] Define an initial reference environment: an explicitly versioned Ubuntu LTS host on x86_64. Record kernel, Lima and QEMU versions; add other distributions or Linux ARM64 only after separate validation.
+- [ ] Detect the host OS and CPU architecture, then select or configure an appropriate VM driver and guest architecture. Preserve the existing macOS VZ workflow.
+- [ ] Support Linux QEMU workers with documented KVM prerequisites, executable discovery and permissions. Fail clearly when required virtualization capabilities are unavailable.
+- [ ] Select matching guest images and align bootstrap inputs with NodeProvider architecture properties instead of hardcoding `aarch64` and `kubernetes.io/arch: arm64`.
+- [ ] Add Linux helper lifecycle commands backed by a systemd user service, with a documented foreground mode. Retain launchd support on macOS and preserve private state across helper restarts.
+- [ ] Make Platform-to-helper connectivity work with Linux container networking without assuming Docker Desktop's `host.docker.internal`. Validate the configured endpoint, certificate trust and guest-to-Platform registration path.
+- [ ] Validate Lima VM-to-VM networking and tenant worker VPN connectivity with multiple workers on Linux.
+- [ ] Preserve the same tenant pool, NodeProvider and helper capacity controls, ownership checks, retry behavior and managed deletion contract on both operating systems.
+- [ ] Add platform-selection and service-management regression tests. Keep offline checks on Linux and macOS, then add opt-in real-worker validation on a Linux runner with the required virtualization capabilities.
+- [ ] Repeat the two-tenant exercise on the reference Linux host: fresh setup, Ready workers, nginx placement, dynamic scale-up, empty-worker scale-down and actual VM deletion during teardown.
+- [ ] Include Linux service definitions, configuration, examples and tests in this repository. Document Linux prerequisites, installation, troubleshooting and cleanup without requiring files or custom resources from another project.
+- [ ] Update platform-specific names and documentation when Linux support is implemented. Publish the tested host/architecture/backend combinations and keep unsupported combinations explicit.
+
+Exit criterion: a developer on the documented Linux reference host can install this repository's provider, reproduce the two-tenant autoscaling example and confirm managed VM cleanup. Linux helper restarts preserve ownership, macOS regression checks pass and the compatibility record distinguishes real VM validation from offline tests. Linux support remains planned until these checks pass.
+
+## Phase 7 — Experimental release
 
 - [ ] Publish a tested compatibility matrix and remaining limitations.
 - [ ] Improve provisioning progress and actionable failure diagnostics.
@@ -76,6 +95,6 @@ Exit criterion: a tagged release has reproducible installation and cleanup instr
 
 ## Later candidates
 
-Multiple worker shapes per provider, resource-aware host budgeting, Linux support, multiple hosts and alternative Lima management backends can be discussed after the first workflow is reproducible. They are not part of the initial release commitment.
+Multiple worker shapes per provider, resource-aware host budgeting, multiple hosts and alternative Lima management backends can be discussed after the first workflow is reproducible. They are not part of the initial release commitment.
 
 A phase may need multiple commits or pull requests. Keep unrelated changes separate rather than treating the suggested commit titles as a requirement to bundle everything.
