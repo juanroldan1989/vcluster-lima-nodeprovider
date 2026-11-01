@@ -116,3 +116,5 @@ Generated script output is redirected to the root-readable guest file `/var/log/
 ## Platform integration
 
 The [installation guide](installation.md) documents the OpenTofu module, Platform resources, private credentials and managed cleanup. The offline checks do not modify Platform objects or live VMs. Run `python3 tests/integration_platform.py` to exercise the real module over TLS against fake Lima; it creates no VMs but requires a provider download and a local listening socket.
+
+The [two-tenant autoscaling example](../examples/autoscaling/README.md) demonstrates the shared budget, worker observations and cleanup. Its [recovery guidance](../examples/autoscaling/README.md#delays-failures-and-interrupted-runs) covers interrupted provisioning and teardown.

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lima-scale-test
+  namespace: default
+  labels:
+    app: lima-scale-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lima-scale-test
+  template:
+    metadata:
+      labels:
+        app: lima-scale-test
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.28-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            # One Pod fits a 1-CPU worker; two need 1200m and cannot share it.
+            requests:
+              cpu: 600m
+              memory: 128Mi
+            limits:
+              cpu: 750m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5

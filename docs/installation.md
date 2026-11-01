@@ -169,6 +169,25 @@ Deploying a template does not grant project access or change this allowlist. If 
 
 ### 2. Create the tenant
 
+`private-nodes-lima-auto` is the default ID of the `VirtualClusterTemplate` included in this repository. Its source is [platform/tenant-template.yaml.tmpl](../platform/tenant-template.yaml.tmpl).
+
+| Step | What this repository provides |
+| --- | --- |
+| Source | `platform/tenant-template.yaml.tmpl` defines the private-node template with placeholders for its ID, provider, worker profile and pool limits. |
+| `./setup.sh prepare` | Renders that source into `.local/tenant-template.yaml` using your configuration. |
+| `./setup.sh deploy` | Applies the generated manifest to Platform, creating the `VirtualClusterTemplate` resource. |
+| `vcluster create --template private-nodes-lima-auto` | Creates a tenant from that installed resource. |
+
+The default ID is configured by `--template-name` in [helper/manage.py](../helper/manage.py). If you override it during preparation, use the same ID in the creation command below. A custom `--state-dir` also changes the generated manifest's location.
+
+This workflow supplies the template from this project; no template from a separate lab or previous installation is required. After deployment, verify that the resource exists:
+
+```bash
+kubectl --context k3d-host-cluster get virtualclustertemplate private-nodes-lima-auto
+```
+
+Use your configured host context and template ID if you changed the defaults.
+
 In Platform, select **Private Nodes Template (Lima Auto)**. If you changed the default template ID during preparation, select that ID.
 
 Alternatively, create the tenant with the CLI:
@@ -183,7 +202,7 @@ vcluster create lima-demo --driver platform \
 | Value | What to use |
 | --- | --- |
 | `lima-demo` | The name for your new tenant. |
-| `private-nodes-lima-auto` | The template ID configured during preparation. |
+| `private-nodes-lima-auto` | The resource ID generated and installed by this project; replace it if you set `--template-name`. |
 | `YOUR-PROJECT` | Your Platform project name. |
 | `YOUR-CONNECTED-CLUSTER` | The connected cluster name in Platform, rather than the kubectl context name. |
 
@@ -235,6 +254,8 @@ Use `--pod-cidr` and `--service-cidr` during preparation if these networks confl
 Auto Nodes handles scheduling and disruption decisions; the provider supplies the VM lifecycle. Actual removal depends on Auto Nodes, system Pods and disruption constraints. The one-minute setting is not a guarantee that a worker disappears one minute after scaling down.
 
 The prototype demonstrated empty-worker deletion. Its short instance-type labels prevented some occupied-worker consolidation; that limitation remains unresolved here.
+
+For a complete two-tenant exercise with a workload, shared capacity controls and VM deletion checks, follow the [autoscaling example](../examples/autoscaling/README.md). The [autoscaling validation record](autoscaling-validation.md) documents the observed environment and results.
 
 ## Private files and credentials
 
@@ -321,4 +342,4 @@ The smoke test verified the following sequence:
 
 The GitHub workflow is configured to repeat the integration test with **OpenTofu 1.10.6**. Local results do not establish that the remote workflow has passed.
 
-**Validation scope:** This record covers one observed environment. It does not establish a support guarantee or demonstrate multi-tenant scaling in this extracted repository. Automated live-worker acceptance remains planned.
+**Validation scope:** This smoke test covers one worker in one observed environment. For the separate two-tenant scaling exercise, see the [autoscaling validation record](autoscaling-validation.md). These observations do not establish a support guarantee. Automated live-worker acceptance remains planned.

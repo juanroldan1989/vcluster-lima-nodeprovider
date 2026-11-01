@@ -23,6 +23,7 @@ Use descriptive commit subjects. This project uses prefixes such as `docs:`, `fe
 For runtime code:
 
 - Keep Platform integration, VM lifecycle operations and guest bootstrap responsibilities explicit.
+- Keep provider manifests, OpenTofu modules, bootstrap code and examples in this repository. Installation must not depend on files or pre-existing custom resources from a separate lab or project. Declare upstream tools and services as prerequisites.
 - Document API inputs, configuration defaults, lifecycle ownership and recovery behavior.
 - Pass process arguments explicitly and validate identities before operating on VMs.
 - Keep creation retries idempotent; delete only resources with recorded ownership.
@@ -79,9 +80,15 @@ python3 -m venv .venv
 
 Ruff checks Python errors and unused code. The repository checker validates syntax, local Markdown links, image references and basic formatting. Bandit scans `helper/` for medium- and high-severity findings; tests are outside that runtime scan. Static scanning does not validate the whole trust model or replace review of the trusted guest bootstrap boundary.
 
-Separate [test](.github/workflows/test.yml), [lint](.github/workflows/lint.yml) and [security](.github/workflows/security.yml) workflows run on pull requests, pushes to `main` and manual dispatch. They do not provision VMs or use Platform credentials. Acceptance testing of real workers remains planned; see the [roadmap](ROADMAP.md).
+Separate [test](.github/workflows/test.yml), [lint](.github/workflows/lint.yml) and [security](.github/workflows/security.yml) workflows run on pull requests, pushes to `main` and manual dispatch. They do not provision VMs or use Platform credentials. Automated acceptance testing of real workers remains planned; the opt-in manual workflow is documented below. See the [roadmap](ROADMAP.md) for release work.
 
 The README's workflow badges follow [GitHub's status badge format](https://docs.github.com/en/actions/how-tos/monitor-workflows/add-a-status-badge). Each badge links to this repository's corresponding workflow and displays the result for `main`. Adding a badge does not create a check or make it pass; a workflow must run on GitHub first. The gray acceptance badge links to the roadmap and does not claim a successful run.
+
+## Validating the autoscaling example
+
+The [two-tenant walkthrough](examples/autoscaling/README.md) is an opt-in live test. It creates real tenants and up to four Lima workers, so review the worker profile and shared capacity budget before running it. Keep credentials under ignored `.local/` and remove workers through Platform before stopping the helper or removing the provider.
+
+When recording results, include application readiness, Node and NodeClaim counts, ownership records and actual VM removal. Follow the structure in the [autoscaling validation record](docs/autoscaling-validation.md); do not publish kubeconfigs, state files or bootstrap logs. Documentation of a live test does not establish that GitHub acceptance automation exists.
 
 ## Opening a pull request
 

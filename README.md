@@ -11,7 +11,7 @@ A community Lima NodeProvider for vCluster Platform that dynamically provisions 
 [![lint](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/lint.yml)
 [![security](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/security.yml)
 
-[Goals](#goals) · [Architecture](#architecture) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Goals](#goals) · [Architecture](#architecture) · [Autoscaling example](examples/autoscaling/README.md) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 <a name="project-status"></a>
 
@@ -19,7 +19,7 @@ A community Lima NodeProvider for vCluster Platform that dynamically provisions 
 
 **Early development.** The repository contains the authenticated helper, guest bootstrap adapter, OpenTofu node module, Platform manifests and setup commands. An [installation guide](docs/installation.md) covers provider deployment, tenant creation and managed cleanup. There is no packaged release yet.
 
-A manual smoke test of this implementation provisioned one real Ready worker and verified that deleting its tenant removed the Lima VM and ownership record. A separate prototype demonstrated multi-tenant scale-up and empty-worker deletion. These checks do not establish a supported version matrix. See the [validation record](docs/installation.md#validation-record) and [roadmap](ROADMAP.md) for evidence and remaining release work.
+Live validation provisioned workers in two independent tenants, scaled from two to four managed VMs, then returned to two as application demand fell. Tenant deletion removed the remaining VMs and ownership records. The [two-tenant autoscaling example](examples/autoscaling/README.md) provides the workload, shared capacity budget, observation commands and managed teardown instructions. See the [worker validation record](docs/installation.md#validation-record), [autoscaling validation record](docs/autoscaling-validation.md) and [roadmap](ROADMAP.md) for evidence and remaining release work.
 
 This is an independent community project, maintained by [Juan Roldan](https://github.com/juanroldan1989). It is not an official vCluster or Lima distribution.
 
@@ -156,6 +156,8 @@ The [installation guide](docs/installation.md#prepare-and-deploy) explains each 
 
 Follow [Create a tenant and observe a worker](docs/installation.md#create-a-tenant-and-observe-a-worker) to allow the template in your project, create a tenant and confirm its worker reaches Kubernetes `Ready`.
 
+To explore workload-driven scale-up and worker removal in two independent tenants, follow the [autoscaling example](examples/autoscaling/README.md). It uses one shared provider with a four-worker budget.
+
 Provider deployment does not create a tenant or VM. After testing, follow [Cleanup before removing Platform](docs/installation.md#cleanup-before-removing-platform) to remove workers through their managed lifecycle.
 
 ### Optional: run the offline checks
@@ -186,7 +188,7 @@ Review the [roadmap](ROADMAP.md) for remaining work or follow the [contribution 
 | Lint | Ruff checks plus source syntax, local documentation links and text formatting. |
 | Security | Bandit scans the helper for medium- and high-severity Python findings. This is a static check, not a security certification. |
 
-The test, lint and security badges display this repository's latest workflow result on `main`. They will show a result after the workflows are pushed and run on GitHub; local checks do not set their status. The acceptance badge remains marked planned until live acceptance tests exist. See [CONTRIBUTING.md](CONTRIBUTING.md#running-lint-and-security-checks) for local commands.
+The test, lint and security badges display this repository's latest workflow result on `main`. They will show a result after the workflows are pushed and run on GitHub; local checks do not set their status. The acceptance badge remains marked planned until automated live acceptance tests exist. See [CONTRIBUTING.md](CONTRIBUTING.md#running-lint-and-security-checks) for local commands.
 
 <a name="related-projects"></a>
 
