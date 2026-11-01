@@ -45,6 +45,7 @@ Exit criterion met by the documented two-tenant exercise and a live run on 2026-
 
 Capture real resources created with this repository's [two-tenant example](examples/autoscaling/README.md), using consistent tenant and VM names throughout the screenshots.
 
+- [x] Add named screenshot placeholders, captions and display locations across the README, installation guide and [autoscaling walkthrough](examples/autoscaling/README.md).
 - [ ] Capture the Lima NodeProvider in Platform's NodeProviders section, showing its availability and worker node type.
 - [ ] Capture the Default project with both testing tenants visible and running.
 - [ ] For each tenant, capture the Nodes section with the joined Lima workers and their Ready status.
@@ -59,7 +60,7 @@ Capture real resources created with this repository's [two-tenant example](examp
 - [ ] Capture final teardown evidence showing the test tenants and their managed VMs have been removed.
 - [ ] Store images under `docs/images/screenshots/` with descriptive filenames, useful alt text and captions stating what each image demonstrates. Record the capture date and tested versions.
 - [ ] Keep credentials, kubeconfig contents and bootstrap logs out of captures. Crop unrelated resources so the screenshots focus on this project's lifecycle.
-- [ ] Add a concise screenshot showcase to the README and link the relevant images from the autoscaling walkthrough; keep a fuller gallery for the complete sequence.
+- [ ] Add a concise screenshot showcase to the README and use the autoscaling walkthrough for the complete capture sequence.
 
 Exit criterion: readers can visually follow provider setup, two-tenant provisioning, worker readiness, workload placement, scale-up, automatic VM removal and teardown using screenshots from a real run. The views agree on tenant, claim and VM identities and make the project's local autoscaling behavior easy to assess.
 

@@ -90,6 +90,10 @@ The [two-tenant walkthrough](examples/autoscaling/README.md) is an opt-in live t
 
 When recording results, include application readiness, Node and NodeClaim counts, ownership records and actual VM removal. Follow the structure in the [autoscaling validation record](docs/autoscaling-validation.md); do not publish kubeconfigs, state files or bootstrap logs. Documentation of a live test does not establish that GitHub acceptance automation exists.
 
+## Adding screenshots
+
+Use the [autoscaling walkthrough](examples/autoscaling/README.md#screenshot-capture-metadata) for reserved filenames, capture instructions and display locations. Store captures under [docs/images/screenshots/](docs/images/screenshots/README.md), record the capture metadata and replace each named placeholder at all listed locations. Keep pending captures clearly labelled and preserve the historical validation record when adding images from a new run.
+
 ## Opening a pull request
 
 Explain what changed, why it matters, which roadmap goal it supports and how it was validated. Call out limitations or configuration migration where relevant. The pull request template provides space for that evidence.

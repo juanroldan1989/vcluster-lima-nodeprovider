@@ -4,6 +4,8 @@ Run the same nginx Deployment in two independent vCluster tenants and observe ea
 
 This is a live lab: the commands create real tenants and VMs. Read the [installation prerequisites](../../docs/installation.md#prerequisites) first. Run commands from the repository root.
 
+Screenshot placeholders follow the steps below. Fill in the [capture metadata](#screenshot-capture-metadata) when adding images, then update the listed reuse locations.
+
 ## What the example demonstrates
 
 | Stage | Ready replicas per tenant | Expected workers per tenant | Total managed VMs |
@@ -27,6 +29,22 @@ Use the [setup commands](../../docs/installation.md#prepare-and-deploy) with thi
 ./setup.sh check
 ./setup.sh deploy
 ```
+
+<a name="platform-nodeprovider"></a>
+
+> **Screenshot placeholder — Lima NodeProvider**
+>
+> Show the provider in Platform's NodeProviders view with its ID, availability and 1 CPU / 2Gi worker node type visible.
+>
+> Planned image: `docs/images/screenshots/platform-nodeprovider.png`.
+
+<a name="lima-auto-template"></a>
+
+> **Screenshot placeholder — Dynamic tenant template**
+>
+> Show the installed template's provider reference and dynamic pool limits: two nodes, 2 CPUs and 4Gi per tenant for this example configuration.
+>
+> Planned image: `docs/images/screenshots/lima-auto-template.png`.
 
 Preparation is intended for a fresh installation or one whose managed workers have already been removed. It refuses configuration changes while ownership records remain. Use your complete settings if you change the defaults.
 
@@ -69,6 +87,14 @@ vcluster create lima-demo-b --driver platform \
 ```
 
 Each tenant has its own control plane, Kubernetes API and worker membership. They share the provider's capacity budget; their workers are not interchangeable nodes in one cluster. Tenant system Pods may request an initial worker before the application is deployed.
+
+<a name="default-project-tenants"></a>
+
+> **Screenshot placeholder — Default project tenants**
+>
+> Show lima-demo-a and lima-demo-b running in the Default project after the baseline workers and nginx replicas are Ready.
+>
+> Planned image: `docs/images/screenshots/default-project-tenants.png`.
 
 ### Save private kubeconfigs
 
@@ -121,17 +147,105 @@ kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default get po
 kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig get nodes -o wide
 ```
 
+<a name="lima-demo-a-overview"></a>
+
+> **Screenshot placeholder — Tenant A overview**
+>
+> Show lima-demo-a's graph or overview with its hosted control plane, Auto Nodes worker and Lima provider association at baseline.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-overview.png`.
+
+<a name="lima-demo-a-nodes-baseline"></a>
+
+> **Screenshot placeholder — Tenant A baseline worker**
+>
+> Show lima-demo-a's Nodes view with one joined Lima worker in Ready state. Keep the worker name legible for later comparisons.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-nodes-baseline.png`.
+
+<a name="lima-demo-b-nodes-baseline"></a>
+
+> **Screenshot placeholder — Tenant B baseline worker**
+>
+> Show lima-demo-b's Nodes view with one joined Lima worker in Ready state, using the same columns as tenant A.
+>
+> Planned image: `docs/images/screenshots/lima-demo-b-nodes-baseline.png`.
+
 ## 4. Scale up both tenants
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=2
 kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=2
+```
 
+Capture provisioning while the new workers are being requested, before waiting for both rollouts to finish:
+
+<a name="nodeclaims-provisioning"></a>
+
+> **Screenshot placeholder — NodeClaims provisioning**
+>
+> Capture the extra NodeClaims while they are Pending or Provisioning after both Deployments are scaled to two replicas. Keep tenant associations visible.
+>
+> Planned image: `docs/images/screenshots/nodeclaims-provisioning.png`.
+
+Then wait for application readiness:
+
+```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default rollout status deployment/lima-scale-test --timeout=15m
 kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default rollout status deployment/lima-scale-test --timeout=15m
 ```
 
-Repeat the Pod and Node checks. Each tenant should now have two Ready replicas on separate workers. Also inspect the host-side claims and the actual VM inventory:
+Repeat the Pod and Node checks. Each tenant should now have two Ready replicas on separate workers.
+
+<a name="lima-demo-a-nodes-scaled-up"></a>
+
+> **Screenshot placeholder — Tenant A scaled-up workers**
+>
+> Show two Ready Lima workers in lima-demo-a. Match the baseline view so the additional worker is easy to identify.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-nodes-scaled-up.png`.
+
+<a name="lima-demo-b-nodes-scaled-up"></a>
+
+> **Screenshot placeholder — Tenant B scaled-up workers**
+>
+> Show two Ready Lima workers in lima-demo-b using the same view as its baseline capture.
+>
+> Planned image: `docs/images/screenshots/lima-demo-b-nodes-scaled-up.png`.
+
+<a name="lima-demo-a-deployment"></a>
+
+> **Screenshot placeholder — Tenant A nginx Deployment**
+>
+> Show lima-scale-test in lima-demo-a's Deployments view with two desired, Ready and available replicas.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-deployment.png`.
+
+<a name="lima-demo-b-deployment"></a>
+
+> **Screenshot placeholder — Tenant B nginx Deployment**
+>
+> Show lima-scale-test in lima-demo-b's Deployments view with two desired, Ready and available replicas.
+>
+> Planned image: `docs/images/screenshots/lima-demo-b-deployment.png`.
+
+<a name="lima-demo-a-pods"></a>
+
+> **Screenshot placeholder — Tenant A Pod placement**
+>
+> Show both Ready nginx Pods in lima-demo-a's default namespace with the Node column visible. The replicas should be on distinct workers.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-pods.png`.
+
+<a name="lima-demo-b-pods"></a>
+
+> **Screenshot placeholder — Tenant B Pod placement**
+>
+> Show both Ready nginx Pods in lima-demo-b's default namespace with their associated worker names visible.
+>
+> Planned image: `docs/images/screenshots/lima-demo-b-pods.png`.
+
+Also inspect the host-side claims and the actual VM inventory:
 
 ```bash
 ./setup.sh status
@@ -154,6 +268,30 @@ PY
 
 Use your configured ownership path if you changed `--state-dir`. Keep the VM names for the scale-down check. The inventory may also contain unrelated VMs; only count the VMs mapped to these two tenants.
 
+<a name="nodeclaims-available"></a>
+
+> **Screenshot placeholder — NodeClaims available**
+>
+> Show four available Platform NodeClaims, two for each tenant, after all workers have joined. Correlate claim identities with the helper status capture.
+>
+> Planned image: `docs/images/screenshots/nodeclaims-available.png`.
+
+<a name="helper-status"></a>
+
+> **Screenshot placeholder — Shared capacity and ownership**
+>
+> Capture ./setup.sh status after scale-up. Show max_nodes: 4, the worker profile and the tenant/claim/VM mappings without displaying credential files.
+>
+> Planned image: `docs/images/screenshots/helper-status.png`.
+
+<a name="lima-vms-scaled-up"></a>
+
+> **Screenshot placeholder — Four managed Lima VMs**
+>
+> Capture limactl list on the Mac after scale-up. Keep all four mapped VM names and their Running state legible.
+>
+> Planned image: `docs/images/screenshots/lima-vms-scaled-up.png`.
+
 ## 5. Reduce demand and verify VM removal
 
 ```bash
@@ -171,6 +309,38 @@ For each retired worker, confirm all four observations:
 4. Its exact `vclima-*` VM name is absent from `limactl list`.
 
 Auto Nodes initiates removal; Platform destroys the managed OpenTofu resource and the helper deletes its owned VM. Do not manually delete a Lima VM to claim that automatic scale-down succeeded.
+
+<a name="lima-demo-a-nodes-scaled-down"></a>
+
+> **Screenshot placeholder — Tenant A after scale-down**
+>
+> Show lima-demo-a with one remaining Ready worker after automatic removal. Use the same Nodes view as the baseline and scale-up captures.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-nodes-scaled-down.png`.
+
+<a name="lima-demo-b-nodes-scaled-down"></a>
+
+> **Screenshot placeholder — Tenant B after scale-down**
+>
+> Show lima-demo-b with one remaining Ready worker after automatic removal, keeping its worker identity visible.
+>
+> Planned image: `docs/images/screenshots/lima-demo-b-nodes-scaled-down.png`.
+
+<a name="nodeclaims-scaled-down"></a>
+
+> **Screenshot placeholder — NodeClaims after scale-down**
+>
+> Show only the two retained example claims, one per tenant. Compare the exact claim identities with the four-claim capture.
+>
+> Planned image: `docs/images/screenshots/nodeclaims-scaled-down.png`.
+
+<a name="lima-vms-scaled-down"></a>
+
+> **Screenshot placeholder — Two managed Lima VMs remain**
+>
+> Capture limactl list after scale-down. Confirm the two retired VM names are absent and the retained names match the workers still shown in Platform.
+>
+> Planned image: `docs/images/screenshots/lima-vms-scaled-down.png`.
 
 ### If an occupied worker remains
 
@@ -209,7 +379,60 @@ limactl list --format '{{.Name}} {{.Status}}'
 
 Confirm both tenants are gone and none of their claims, ownership records or mapped VMs remain. Unrelated tenants and manually managed VMs can remain in the output.
 
+<a name="default-project-teardown"></a>
+
+> **Screenshot placeholder — Default project after teardown**
+>
+> Show that lima-demo-a and lima-demo-b are absent from the Default project after managed tenant deletion. Unrelated tenants can remain.
+>
+> Planned image: `docs/images/screenshots/default-project-teardown.png`.
+
+<a name="nodeclaims-teardown"></a>
+
+> **Screenshot placeholder — NodeClaims after teardown**
+>
+> Show that no Platform NodeClaims for either example tenant remain after deletion.
+>
+> Planned image: `docs/images/screenshots/nodeclaims-teardown.png`.
+
+<a name="lima-vms-teardown"></a>
+
+> **Screenshot placeholder — Mac inventory after teardown**
+>
+> Capture limactl list after both tenants are deleted. All four example VM names must be absent; unrelated VMs may remain.
+>
+> Planned image: `docs/images/screenshots/lima-vms-teardown.png`.
+
 If you are also removing the provider, follow [Cleanup before removing Platform](../../docs/installation.md#cleanup-before-removing-platform) only after worker cleanup finishes. Remove the example kubeconfigs after they are no longer needed. Never discard helper ownership records or provider state while workers remain.
+
+## Screenshot capture metadata
+
+All screenshot captures are pending. Keep tenant, claim and VM identities consistent throughout a capture run. Update this table when screenshots are taken; use a separate metadata block if images come from different runs.
+
+| Field | Capture value |
+| --- | --- |
+| Capture date and run | Pending |
+| Host OS and CPU architecture | Pending |
+| vCluster Platform version | Pending |
+| Tenant chart and Kubernetes versions | Pending |
+| vCluster CLI and Lima versions | Pending |
+| Provider and template IDs | Pending |
+| Worker profile and capacity limits | Pending |
+
+The [asset directory guide](../../docs/images/screenshots/README.md) explains how to add each PNG and replace its callouts with embedded images. The [validation record](../../docs/autoscaling-validation.md) remains the source for the earlier measured run; future captures must identify their own run.
+
+### Reused display locations
+
+The walkthrough contains all 23 capture slots. These images also have placeholders in other documents; replace every corresponding callout when adding a capture.
+
+| Planned image | Additional display locations |
+| --- | --- |
+| `platform-nodeprovider.png` | [README showcase](../../README.md#screenshot-showcase), [installation](../../docs/installation.md#4-deploy-the-provider-and-inspect-its-status). |
+| `lima-auto-template.png` | [Installation template defaults](../../docs/installation.md#template-defaults). |
+| `default-project-tenants.png` | [README showcase](../../README.md#screenshot-showcase). |
+| `lima-demo-a-nodes-baseline.png` | [Installation worker readiness](../../docs/installation.md#4-confirm-readiness-inside-the-tenant). |
+| `lima-vms-scaled-up.png` | [README showcase](../../README.md#screenshot-showcase). |
+| `lima-vms-scaled-down.png` | [README showcase](../../README.md#screenshot-showcase). |
 
 ## Delays, failures and interrupted runs
 

@@ -54,6 +54,10 @@ For scale-down, the test confirmed removal of each retired Node, its Platform cl
 
 The workload manifest passed Kubernetes server-side dry-run validation in both tenants before deployment. The repository's 52 offline tests and documentation checks also passed.
 
+## Screenshot references
+
+The [autoscaling walkthrough](../examples/autoscaling/README.md#screenshot-capture-metadata) contains the visual evidence slots and capture metadata for a run of the same workflow. Captures are pending. Record their actual date, versions and resource identities; later screenshots should not be presented as images of the historical run measured above.
+
 ## Evidence and scope
 
 The test checks application Ready replica counts, tenant Node readiness, Platform NodeClaims, helper ownership records and actual Lima VM inventory. Credential files, OpenTofu state, join payloads and guest logs are excluded from this public record.

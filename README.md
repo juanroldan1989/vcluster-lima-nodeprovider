@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="vcluster-plus-lima.png" alt="vCluster and Lima" width="640">
+  <img src="docs/images/vcluster-plus-lima.png" alt="vCluster and Lima" width="640">
 </p>
 
 # Lima NodeProvider for vCluster
@@ -11,7 +11,7 @@ A community Lima NodeProvider for vCluster Platform that dynamically provisions 
 [![lint](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/lint.yml)
 [![security](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/security.yml)
 
-[Goals](#goals) · [Architecture](#architecture) · [Autoscaling example](examples/autoscaling/README.md) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Goals](#goals) · [Architecture](#architecture) · [Autoscaling example](examples/autoscaling/README.md) · [Screenshots](#screenshot-showcase) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 <a name="project-status"></a>
 
@@ -117,6 +117,36 @@ flowchart TB
     demand --> platform
     platform -->|Authenticated HTTPS| local
 ```
+
+<a name="screenshot-showcase"></a>
+
+## 📸 Screenshot showcase
+
+The following slots reserve space for captures from a real two-tenant run. The [autoscaling walkthrough](examples/autoscaling/README.md) contains the full capture sequence, planned filenames and capture metadata.
+
+> **Screenshot placeholder — Lima NodeProvider**
+>
+> Show the provider in Platform's NodeProviders view with its ID, availability and 1 CPU / 2Gi worker node type visible.
+>
+> Planned image: `docs/images/screenshots/platform-nodeprovider.png` · [Capture details](examples/autoscaling/README.md#platform-nodeprovider).
+
+> **Screenshot placeholder — Default project tenants**
+>
+> Show lima-demo-a and lima-demo-b running in the Default project after the baseline workers and nginx replicas are Ready.
+>
+> Planned image: `docs/images/screenshots/default-project-tenants.png` · [Capture details](examples/autoscaling/README.md#default-project-tenants).
+
+> **Screenshot placeholder — Four managed Lima VMs**
+>
+> Capture limactl list on the Mac after scale-up. Keep all four mapped VM names and their Running state legible.
+>
+> Planned image: `docs/images/screenshots/lima-vms-scaled-up.png` · [Capture details](examples/autoscaling/README.md#lima-vms-scaled-up).
+
+> **Screenshot placeholder — Two managed Lima VMs remain**
+>
+> Capture limactl list after scale-down. Confirm the two retired VM names are absent and the retained names match the workers still shown in Platform.
+>
+> Planned image: `docs/images/screenshots/lima-vms-scaled-down.png` · [Capture details](examples/autoscaling/README.md#lima-vms-scaled-down).
 
 <a name="getting-started"></a>
 

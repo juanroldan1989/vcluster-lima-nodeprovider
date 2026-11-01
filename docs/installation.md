@@ -67,6 +67,12 @@ Preparation does not create a tenant or VM.
 
 `status` reports helper health, managed worker records and Platform provider, node type and NodeClaim resources. Tenant creation is covered in [Create a tenant and observe a worker](#create-a-tenant-and-observe-a-worker).
 
+> **Screenshot placeholder — Lima NodeProvider**
+>
+> Show the provider in Platform's NodeProviders view with its ID, availability and 1 CPU / 2Gi worker node type visible.
+>
+> Planned image: `docs/images/screenshots/platform-nodeprovider.png` · [Capture details](../examples/autoscaling/README.md#platform-nodeprovider).
+
 ### Connection settings
 
 The default configuration assumes Docker Desktop networking:
@@ -232,6 +238,12 @@ Confirm the worker's status is **Ready**. Helper health and completed bootstrap 
 
 `vcluster connect` switches your kubeconfig context into the tenant. Use explicit `--context` for subsequent host commands.
 
+> **Screenshot placeholder — Tenant A baseline worker**
+>
+> Example worker-readiness view from tenant A in the two-tenant walkthrough. This guide uses lima-demo for its single-tenant commands.
+>
+> Planned image: `docs/images/screenshots/lima-demo-a-nodes-baseline.png` · [Capture details](../examples/autoscaling/README.md#lima-demo-a-nodes-baseline).
+
 ### Template defaults
 
 | Setting | Generated configuration |
@@ -243,6 +255,12 @@ Confirm the worker's status is **Ready**. Helper health and completed bootstrap 
 | Service CIDR | `10.130.0.0/16` |
 
 Use `--pod-cidr` and `--service-cidr` during preparation if these networks conflict with your environment. See the upstream [Auto Nodes configuration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/private-nodes/auto-nodes) for pool settings.
+
+> **Screenshot placeholder — Dynamic tenant template**
+>
+> Show the generated dynamic pool and provider reference. The capture uses the autoscaling example's two-worker pool; installer defaults are documented above.
+>
+> Planned image: `docs/images/screenshots/lima-auto-template.png` · [Capture details](../examples/autoscaling/README.md#lima-auto-template).
 
 ### Worker removal behavior
 
