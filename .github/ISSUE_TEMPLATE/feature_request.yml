@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a focused improvement or discuss a roadmap milestone.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the user and the workflow that needs improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Include alternatives and any relevant roadmap phase.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: How would we verify it?
+      description: Describe an observable success criterion and any platform requirements.

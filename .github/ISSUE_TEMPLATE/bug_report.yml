@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a documentation or implementation problem.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Include only redacted information. Follow SECURITY.md for sensitive reports.
+        The repository is being built in phases; identify the documentation or code revision you tested.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the relevant document or a minimal reproduction with synthetic values.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Revision and environment
+      description: Include the commit or release and, if relevant, macOS, architecture, Lima, vCluster and Platform versions.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Include useful output without tokens, credentials, kubeconfigs, or private bootstrap data.

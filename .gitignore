@@ -1,0 +1,49 @@
+# macOS and editor-local files
+.DS_Store
+.idea/
+.vscode/
+
+# Generated helper configuration, credentials, ownership records and logs
+.local/
+.env
+.env.*
+!.env.example
+*.log
+*.key
+*.p12
+*.pfx
+
+# Kubernetes client credentials
+.kube/
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+
+# Terraform / OpenTofu runtime state and local variable values
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Python local environments and generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VM disks and downloaded images
+*.qcow2
+*.raw
+*.img
+*.iso
