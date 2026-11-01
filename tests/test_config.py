@@ -26,7 +26,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config["limactl"], "/usr/local/bin/limactl")
 
     def test_invalid_capacity_port_and_host_are_rejected(self):
-        for field, value in (("max_nodes", 0), ("max_nodes", True), ("max_nodes", 9), ("port", 65536),
+        for field, value in (("max_nodes", 0), ("max_nodes", True), ("port", 65536),
                              ("platform_hosts", ["https://platform.example/path"]), ("listen_host", "")):
             original = self.config[field]
             self.config[field] = value
@@ -38,3 +38,15 @@ class ConfigTests(unittest.TestCase):
         del self.config["key_file"]
         with self.assertRaisesRegex(ValueError, "key_file"):
             self.load()
+
+    def test_custom_worker_shape_and_capacity(self):
+        self.config.update(max_nodes=12, worker_size={"cpus": 2, "memory_gib": 4, "disk_gib": 40})
+        config = self.load()
+        self.assertEqual(config["max_nodes"], 12)
+        self.assertEqual(config["worker_size"]["memory_gib"], 4)
+
+    def test_worker_shape_must_have_positive_integer_values(self):
+        for size in ({"cpus": 0, "memory_gib": 2, "disk_gib": 30}, {"cpus": True, "memory_gib": 2, "disk_gib": 30}, {"cpus": 1}):
+            self.config["worker_size"] = size
+            with self.subTest(size=size), self.assertRaises(ValueError):
+                self.load()

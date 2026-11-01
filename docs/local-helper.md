@@ -1,8 +1,8 @@
 # Local helper lifecycle
 
-This guide covers the local API and guest bootstrap adapter. Platform manifests, the OpenTofu module, credential preparation and service installation tooling are not yet included. Nothing in the test workflow requires Platform, internet access, sudo or installed Lima.
+This guide covers the local API and guest bootstrap adapter. Use the [installation guide](installation.md) for Platform integration and setup commands. Offline unit tests require no Platform, internet access, sudo or installed Lima; the separate OpenTofu integration test downloads its REST client provider.
 
-The code was adapted from the project's working local experiment. This extraction keeps its API and fixed worker shape while adding request validation, ownership-record checks, process-boundary tests and explicit configuration validation. Tests in this repository do not establish that the extracted version has been exercised against real VMs.
+The code was adapted from the project's working local experiment. The helper adds request validation, ownership-record checks, process-boundary tests and explicit configuration validation. Worker sizing is configurable; each helper installation accepts one shape at a time. Offline tests alone do not establish real-worker compatibility.
 
 ## Try the offline workflow
 
@@ -25,7 +25,7 @@ The server in [helper/server.py](../helper/server.py) serves JSON over HTTPS wit
 
 | Method and path | Result |
 | --- | --- |
-| `GET /healthz` | Return `status: ok` and the configured `max_nodes`. |
+| `GET /healthz` | Return `status: ok`, `max_nodes`, `worker_size` and a non-secret `config_id` used to detect stale settings. |
 | `POST /nodes` | Reserve ownership, create or resume the VM and execute bootstrap. |
 | `GET /nodes/<id>` | Return the ownership record; set `ready: false` when the VM is missing. An unknown record returns 404. |
 | `PUT /nodes/<id>` | Retry creation or bootstrap for the same identity. The URL and body IDs must match. |
@@ -52,7 +52,7 @@ The example payload is the base64 encoding of a synthetic shell script that runs
 
 `ready: true` in a request means the caller requires completed bootstrap. In a stored record it means the registration command exited successfully. It does not prove that Kubernetes has marked the worker Ready. HTTP create/update responses wait synchronously for provisioning to finish.
 
-The current worker shape is **1 CPU / 2Gi RAM / 30Gi disk**, Ubuntu 22.04 ARM64, using Lima's VZ backend and shared `user-v2` networking. Host directory mounts are disabled. Sizing and supported shapes will become configurable with Platform integration; changing an existing record's identity or sizing is rejected.
+The default worker shape is **1 CPU / 2Gi RAM / 30Gi disk**, Ubuntu 22.04 ARM64, using Lima's VZ backend and shared `user-v2` networking. Host directory mounts are disabled. Configure `worker_size` or use the setup sizing flags to choose another shape. All requests must match the configured shape; changing an existing record's identity or sizing is rejected.
 
 | Status | Meaning |
 | --- | --- |
@@ -86,7 +86,9 @@ Deletion verifies the record's ID and VM name before invoking `limactl delete --
 | Setting | Meaning |
 | --- | --- |
 | `listen_host` / `port` | Explicit bind address and TCP port. The example binds only to loopback. |
-| `max_nodes` | Integer from 1 to 8, retaining the prototype's local ceiling. |
+| `max_nodes` | Positive integer shared across tenants using this helper; the setup default is 8. No automatic host-resource calculation is performed. |
+| `worker_size` | Positive integer `cpus`, `memory_gib` and `disk_gib`; defaults to 1 / 2 / 30 when omitted. |
+| `lima_home` | Optional Lima inventory directory, passed as `LIMA_HOME`; omitted to use Lima's normal inventory. |
 | `state_dir` | Durable ownership records; keep this across helper restarts. |
 | `limactl` | Executable path used for VM operations. |
 | `token_file` | Private shared password file containing at least 32 bytes. |
@@ -99,7 +101,7 @@ With a valid private configuration, token and certificate in place, the develope
 python3 -m helper.server --config .local/config.json
 ```
 
-This command starts a real listener. Its API can create real VMs when clients submit requests; it is separate from the offline test workflow. Preparation and service lifecycle commands are not yet included. Platform running in Kubernetes needs a reachable bind address, trusted certificate and credentials; the loopback example alone does not provide that connection.
+This command starts a real listener. Its API can create real VMs when clients submit requests; it is separate from the offline test workflow. The [setup commands](installation.md#prepare-and-deploy) prepare these files and manage a macOS user service. Platform running in Kubernetes needs a reachable bind address, trusted certificate and credentials; the loopback example alone does not provide that connection.
 
 ## Guest bootstrap boundary
 
@@ -113,4 +115,4 @@ Generated script output is redirected to the root-readable guest file `/var/log/
 
 ## Platform integration
 
-See the [roadmap](../ROADMAP.md) for the planned OpenTofu module, NodeProvider manifests, installation and live-worker validation. The offline checks do not modify Platform objects or live VMs.
+The [installation guide](installation.md) documents the OpenTofu module, Platform resources, private credentials and managed cleanup. The offline checks do not modify Platform objects or live VMs. Run `python3 tests/integration_platform.py` to exercise the real module over TLS against fake Lima; it creates no VMs but requires a provider download and a local listening socket.

@@ -1,0 +1,48 @@
+apiVersion: storage.loft.sh/v1
+kind: VirtualClusterTemplate
+metadata:
+  name: @@TEMPLATE_NAME@@
+  labels:
+    app.kubernetes.io/managed-by: vcluster-lima-nodeprovider
+  annotations:
+    lima.automatalife.com/helper-id: "@@HELPER_ID@@"
+spec:
+  displayName: Private Nodes Template (Lima Auto)
+  description: Provisions up to @@POOL_NODES@@ Lima workers per tenant with @@CPUS@@ CPU / @@MEMORY_GIB@@Gi each, sharing @@MAX_NODES@@ provider slots.
+  template:
+    pro:
+      enabled: true
+    helmRelease:
+      chart:
+        version: @@CHART_VERSION@@
+      values: |
+        privateNodes:
+          enabled: true
+          autoNodes:
+            - provider: @@PROVIDER_NAME@@
+              dynamic:
+                - name: lima-workers-dynamic
+                  nodeTypeSelector:
+                    - property: vcluster.com/node-type
+                      operator: In
+                      values: [@@NODE_TYPE@@]
+                  # These are aggregate worker capacity limits for this tenant pool.
+                  limits:
+                    nodes: "@@POOL_NODES@@"
+                    cpu: "@@POOL_CPUS@@"
+                    memory: @@POOL_MEMORY_GIB@@Gi
+                  disruption:
+                    consolidationPolicy: WhenEmptyOrUnderutilized
+                    consolidateAfter: 1m
+          vpn:
+            enabled: true
+            nodeToNode:
+              enabled: true
+        networking:
+          podCIDR: @@POD_CIDR@@
+          serviceCIDR: @@SERVICE_CIDR@@
+        controlPlane:
+          backingStore:
+            etcd:
+              embedded:
+                enabled: true

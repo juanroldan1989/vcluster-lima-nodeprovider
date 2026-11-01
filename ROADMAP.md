@@ -21,14 +21,14 @@ Exit criterion met by the offline suite: helper behavior can be exercised withou
 
 ## Phase 3 — Platform integration
 
-- [ ] Add the OpenTofu node module and NodeProvider manifest source.
-- [ ] Add preparation, helper startup, health checks, deployment and status commands.
-- [ ] Make paths, Platform access, worker sizing and capacity settings configurable.
-- [ ] Generate private credentials and state outside tracked source files.
-- [ ] Add a tenant template and an installation guide with explicit prerequisites.
-- [ ] Add an integration test covering API authentication, create/read, recovery and destroy.
+- [x] Add the OpenTofu node module and NodeProvider manifest source.
+- [x] Add preparation, helper startup, health checks, deployment and status commands.
+- [x] Make paths, Platform access, worker sizing and capacity settings configurable.
+- [x] Generate private credentials and state outside tracked source files.
+- [x] Add a tenant template and an installation guide with explicit prerequisites.
+- [x] Add an integration test covering API authentication, create/read, recovery and destroy.
 
-Exit criterion: a fresh installation can provision one real worker and remove it through Platform's managed lifecycle.
+Exit criterion met by a manual smoke test on 2026-11-01: a fresh preparation provisioned one real Ready worker, then Platform deletion removed its VM and ownership record. See the [validation record](docs/installation.md#validation-record). Automated live acceptance remains a later milestone.
 
 ## Phase 4 — Reproducible autoscaling example
 
@@ -54,6 +54,6 @@ Exit criterion: a tagged release has reproducible installation and cleanup instr
 
 ## Later candidates
 
-Additional worker shapes, resource-aware host budgeting, Linux support, multiple hosts and alternative Lima management backends can be discussed after the first workflow is reproducible. They are not part of the initial release commitment.
+Multiple worker shapes per provider, resource-aware host budgeting, Linux support, multiple hosts and alternative Lima management backends can be discussed after the first workflow is reproducible. They are not part of the initial release commitment.
 
 A phase may need multiple commits or pull requests. Keep unrelated changes separate rather than treating the suggested commit titles as a requirement to bundle everything.

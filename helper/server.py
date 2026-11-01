@@ -4,6 +4,7 @@
 import argparse
 import base64
 import hmac
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,8 +16,24 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ID = re.compile(r"^[a-f0-9]{24}$")
 MAX_BODY = 2 * 1024 * 1024
-MAX_NODES = 8
-WORKER_SIZE = (1, 2, 30)
+DEFAULT_WORKER_SIZE = {"cpus": 1, "memory_gib": 2, "disk_gib": 30}
+
+
+def normalize_resources(config):
+    if type(config.get("max_nodes")) is not int or config["max_nodes"] < 1:
+        raise ValueError("max_nodes must be a positive integer")
+    size = config.setdefault("worker_size", dict(DEFAULT_WORKER_SIZE))
+    if not isinstance(size, dict) or set(size) != set(DEFAULT_WORKER_SIZE):
+        raise ValueError("worker_size must define cpus, memory_gib and disk_gib")
+    if any(type(value) is not int or value < 1 for value in size.values()):
+        raise ValueError("Worker resources must be positive integers")
+    return config
+
+
+def configuration_id(config):
+    fields = ("listen_host", "port", "max_nodes", "worker_size", "platform_hosts", "state_dir", "limactl", "lima_home")
+    data = {field: config.get(field) for field in fields}
+    return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:16]
 
 
 class APIError(Exception):
@@ -26,9 +43,7 @@ class APIError(Exception):
 
 class Lima:
     def __init__(self, config):
-        if type(config.get("max_nodes")) is not int or not 1 <= config["max_nodes"] <= MAX_NODES:
-            raise ValueError("max_nodes must be an integer between 1 and 8")
-        self.config = dict(config)
+        self.config = normalize_resources(dict(config))
         self.state = Path(config["state_dir"])
         self.state.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(self.state, 0o700)
@@ -39,6 +54,7 @@ class Lima:
             return subprocess.run(
                 [self.config["limactl"], "--tty=false", *args],
                 input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                env=dict(os.environ, LIMA_HOME=self.config["lima_home"]) if self.config.get("lima_home") else None,
                 timeout=timeout, check=True,
             ).stdout
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
@@ -93,8 +109,9 @@ class Lima:
             if not isinstance(request[field], str) or not re.fullmatch(r"[a-z0-9][a-z0-9.-]{0,252}", request[field]):
                 raise APIError(400, "Invalid claim or tenant metadata")
         size = tuple(request[field] for field in ("cpus", "memory_gib", "disk_gib"))
-        if any(type(value) is not int for value in size) or size != WORKER_SIZE:
-            raise APIError(400, "Only the 1 CPU / 2Gi / 30Gi node type is supported")
+        expected = tuple(self.config["worker_size"][field] for field in ("cpus", "memory_gib", "disk_gib"))
+        if any(type(value) is not int for value in size) or size != expected:
+            raise APIError(400, "Worker resources must match the configured node type")
         if request["ready"] is not True:
             raise APIError(400, "A managed node must request completed bootstrap")
         if not isinstance(request["user_data"], str):
@@ -135,7 +152,8 @@ class Lima:
                 node["ready"] = False
                 self.save(node)
                 self.command([
-                    "start", "--name=" + node["vm_name"], "--cpus=1", "--memory=2", "--disk=30",
+                    "start", "--name=" + node["vm_name"], "--cpus=" + str(node["cpus"]),
+                    "--memory=" + str(node["memory_gib"]), "--disk=" + str(node["disk_gib"]),
                     "--containerd=none", "--mount-none", "--arch=aarch64", "--vm-type=vz",
                     # Default per-VM networking reuses 192.168.5.15, which
                     # breaks kubelet routing when multiple workers join.
@@ -219,7 +237,9 @@ def make_handler(manager, token):
                 if not self.authorized():
                     raise APIError(401, "Authentication required")
                 if self.path == "/healthz" and self.command == "GET":
-                    self.response(200, {"status": "ok", "max_nodes": manager.config["max_nodes"]})
+                    self.response(200, {"status": "ok", "max_nodes": manager.config["max_nodes"],
+                                        "worker_size": manager.config["worker_size"],
+                                        "config_id": configuration_id(manager.config)})
                     return
                 if self.path == "/nodes" and self.command == "POST":
                     request = self.read_json()
@@ -263,8 +283,10 @@ def load_config(path):
             raise ValueError("Missing configuration path: " + field)
         candidate = Path(value).expanduser()
         config[field] = str(candidate if candidate.is_absolute() else path.parent / candidate)
-    if type(config.get("max_nodes")) is not int or not 1 <= config["max_nodes"] <= MAX_NODES:
-        raise ValueError("max_nodes must be an integer between 1 and 8")
+    normalize_resources(config)
+    if config.get("lima_home"):
+        candidate = Path(config["lima_home"]).expanduser()
+        config["lima_home"] = str(candidate if candidate.is_absolute() else path.parent / candidate)
     if type(config.get("port")) is not int or not 1 <= config["port"] <= 65535:
         raise ValueError("port must be an integer between 1 and 65535")
     if not isinstance(config.get("listen_host"), str) or not config["listen_host"]:

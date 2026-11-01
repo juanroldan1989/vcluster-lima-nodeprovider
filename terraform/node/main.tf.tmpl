@@ -1,0 +1,46 @@
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    restapi = {
+      source  = "Mastercard/restapi"
+      version = "3.0.0"
+    }
+  }
+}
+
+# Platform supplies var.vcluster and credentials as environment variables.
+# helper.manage substitutes these PUBLIC endpoint/CA values before installing inline HCL.
+provider "restapi" {
+  uri                  = "__LIMA_API_URL__"
+  root_ca_string       = "__LIMA_CA_PEM__"
+  username             = "platform"
+  write_returns_object = true
+  timeout              = 1800
+  debug                = false
+  test_path            = "/healthz"
+  # REST_API_PASSWORD is read from the provider-labelled Kubernetes Secret.
+}
+
+locals {
+  # Platform's Terraform input omits metadata.uid. Project namespace + claim
+  # name are available and remain stable across retries of this NodeClaim.
+  identity = substr(sha256("${var.vcluster.namespace}/${var.vcluster.nodeClaim.metadata.name}"), 0, 24)
+}
+
+resource "restapi_object" "node" {
+  path              = "/nodes"
+  id_attribute      = "id"
+  ignore_changes_to = ["user_data"]
+  data = sensitive(jsonencode({
+    id         = local.identity
+    vm_name    = "vclima-${local.identity}"
+    claim      = var.vcluster.nodeClaim.metadata.name
+    project    = var.vcluster.namespace
+    tenant     = var.vcluster.name
+    cpus       = __WORKER_CPUS__
+    memory_gib = __WORKER_MEMORY_GIB__
+    disk_gib   = __WORKER_DISK_GIB__
+    ready      = true
+    user_data  = base64encode(var.vcluster.userData)
+  }))
+}

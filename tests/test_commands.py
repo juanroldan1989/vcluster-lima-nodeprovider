@@ -128,3 +128,11 @@ class CommandTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(server.APIError):
                 self.manager.create(data)
         self.assertFalse((self.root / "calls.jsonl").exists())
+
+    def test_configured_resources_reach_lima(self):
+        self.manager.config["worker_size"] = {"cpus": 2, "memory_gib": 4, "disk_gib": 40}
+        data = request()
+        data.update(cpus=2, memory_gib=4, disk_gib=40)
+        self.manager.create(data)
+        start = next(call for call in self.calls() if call[0] == "start")
+        self.assertTrue({"--cpus=2", "--memory=4", "--disk=40"}.issubset(start))

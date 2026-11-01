@@ -1,0 +1,28 @@
+apiVersion: storage.loft.sh/v1
+kind: NodeProvider
+metadata:
+  name: @@PROVIDER_NAME@@
+  labels:
+    app.kubernetes.io/managed-by: vcluster-lima-nodeprovider
+  annotations:
+    lima.automatalife.com/helper-id: "@@HELPER_ID@@"
+spec:
+  displayName: Lima (Local macOS)
+  terraform:
+    nodeTemplate:
+      inline: |
+@@TERRAFORM_INLINE@@
+    nodeTypes:
+      - name: @@NODE_TYPE@@
+        displayName: Lima ARM64 - @@CPUS@@ CPU / @@MEMORY_GIB@@Gi
+        resources:
+          cpu: "@@CPUS@@"
+          memory: @@MEMORY_GIB@@Gi
+        properties:
+          kubernetes.io/arch: arm64
+          instance-type: @@NODE_TYPE@@
+        overhead:
+          kubeReserved:
+            cpu: 200m
+            memory: 512Mi
+        maxCapacity: @@MAX_NODES@@

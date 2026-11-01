@@ -7,5 +7,12 @@
   "token_file": "api-token",
   "cert_file": "server.crt",
   "key_file": "server.key",
-  "platform_hosts": ["platform.example.test"]
+  "platform_hosts": [
+    "platform.example.test"
+  ],
+  "worker_size": {
+    "cpus": 1,
+    "memory_gib": 2,
+    "disk_gib": 30
+  }
 }

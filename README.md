@@ -17,9 +17,9 @@ A community Lima NodeProvider for vCluster Platform that dynamically provisions 
 
 ## 📌 Project status
 
-**Early development.** The repository contains the authenticated helper, guest bootstrap adapter, offline tests and automated checks. Platform manifests, the OpenTofu module and installation tooling are not yet included. There is no packaged release or end-to-end installer yet.
+**Early development.** The repository contains the authenticated helper, guest bootstrap adapter, OpenTofu node module, Platform manifests and setup commands. An [installation guide](docs/installation.md) covers provider deployment, tenant creation and managed cleanup. There is no packaged release yet.
 
-A separate local prototype has demonstrated worker creation, registration, multi-tenant scale-up and automatic deletion of empty workers and their Lima VMs. Those results establish the starting point for this project, not a compatibility guarantee for this repository. See the [roadmap](ROADMAP.md) for the migration and release milestones.
+A manual smoke test of this implementation provisioned one real Ready worker and verified that deleting its tenant removed the Lima VM and ownership record. A separate prototype demonstrated multi-tenant scale-up and empty-worker deletion. These checks do not establish a supported version matrix. See the [validation record](docs/installation.md#validation-record) and [roadmap](ROADMAP.md) for evidence and remaining release work.
 
 This is an independent community project, maintained by [Juan Roldan](https://github.com/juanroldan1989). It is not an official vCluster or Lima distribution.
 
@@ -59,7 +59,7 @@ Auto Nodes and its built-in Karpenter make scheduling and consolidation decision
 
 ## 🏗️ Architecture
 
-The architecture below shows the complete integration. The local helper and guest bootstrap adapter are implemented; Platform wiring is not yet included:
+The architecture below shows the provisioning path implemented by this repository:
 
 ```mermaid
 flowchart TB
@@ -122,7 +122,45 @@ flowchart TB
 
 ## 🚀 Getting started
 
-You can exercise the helper locally with Python 3.11 or newer, without installing Lima or vCluster Platform:
+### 1. Check the prerequisites
+
+| Component | Requirement |
+| --- | --- |
+| Mac | macOS on Apple Silicon. |
+| Local tools | Python 3.11 or newer, OpenSSL and Lima. |
+| Host cluster | A running Kubernetes cluster accessible with `kubectl`. |
+| vCluster Platform | Auto Nodes and Terraform NodeProvider features available under your upstream license or trial. |
+| Platform access | Administrator permissions for installation and a logged-in vCluster CLI. |
+
+See the [installation prerequisites](docs/installation.md#prerequisites) for networking and project access requirements. This project does not install or grant licenses for upstream products.
+
+### 2. Prepare and deploy the provider
+
+From the repository root:
+
+```bash
+./setup.sh prepare --platform-host YOUR-PLATFORM-HOSTNAME
+./setup.sh start
+./setup.sh check
+./setup.sh deploy
+./setup.sh status
+```
+
+Use the hostname from your Platform browser URL for `YOUR-PLATFORM-HOSTNAME`, without `https://` or a path. For example, `https://example.loft.host/clusters` becomes `example.loft.host`.
+
+These commands prepare private credentials, start the helper, verify Platform connectivity and install a NodeProvider plus a private-worker tenant template.
+
+The [installation guide](docs/installation.md#prepare-and-deploy) explains each step, connection settings, worker sizing and capacity limits.
+
+### 3. Create your first tenant
+
+Follow [Create a tenant and observe a worker](docs/installation.md#create-a-tenant-and-observe-a-worker) to allow the template in your project, create a tenant and confirm its worker reaches Kubernetes `Ready`.
+
+Provider deployment does not create a tenant or VM. After testing, follow [Cleanup before removing Platform](docs/installation.md#cleanup-before-removing-platform) to remove workers through their managed lifecycle.
+
+### Optional: run the offline checks
+
+You can exercise the helper with Python 3.11 or newer, without installing Lima or vCluster Platform:
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -131,11 +169,11 @@ python3 scripts/check_repository.py
 
 The tests use temporary state and a fake Lima executable. They do not start VMs, execute guest bootstrap commands or contact a live cluster. Read the [local helper guide](docs/local-helper.md) for the API, ownership model, configuration and bootstrap boundaries.
 
-Full installation instructions are not yet available. Review the [roadmap](ROADMAP.md), discuss a feature through [GitHub Issues](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/issues), or follow the [contribution guide](CONTRIBUTING.md).
+### Validation and compatibility
 
-The intended runtime prerequisites are a supported Mac, Lima, a host Kubernetes cluster and vCluster Platform with access to the required Auto Nodes and Terraform NodeProvider features. This project does not install or grant licenses for those upstream products.
+The original prototype used Platform 4.12.1, vCluster 0.37.1 and Lima 2.1.0 on macOS ARM64. For this repository's real-worker smoke test and module integration results, see the [validation record](docs/installation.md#validation-record). A supported version matrix remains a release milestone.
 
-The prototype was exercised with Platform 4.12.1, vCluster 0.37.1 and Lima 2.1.0 on macOS ARM64. These are historical prototype results, not a live compatibility check of the extracted helper. A supported version matrix and fresh-install validation remain release milestones.
+Review the [roadmap](ROADMAP.md) for remaining work or follow the [contribution guide](CONTRIBUTING.md) to help.
 
 <a name="checks"></a>
 
@@ -143,8 +181,8 @@ The prototype was exercised with Platform 4.12.1, vCluster 0.37.1 and Lima 2.1.0
 
 | Badge | What it covers |
 | --- | --- |
-| Test | The offline helper suite on Python 3.11 through 3.14, using fake Lima commands and mocked guest operations. |
-| Acceptance | Planned: real worker creation, registration, scale-down and VM cleanup after the Platform integration is available. |
+| Test | The offline suite on Python 3.11 through 3.14 plus a real OpenTofu/HTTPS lifecycle test using fake Lima. |
+| Acceptance | Planned: automated real-worker creation, registration, scale-down and VM cleanup. |
 | Lint | Ruff checks plus source syntax, local documentation links and text formatting. |
 | Security | Bandit scans the helper for medium- and high-severity Python findings. This is a static check, not a security certification. |
 
@@ -156,7 +194,7 @@ The test, lint and security badges display this repository's latest workflow res
 
 - [vCluster](https://github.com/loft-sh/vcluster): tenant Kubernetes clusters and Auto Nodes.
 - [Lima](https://github.com/lima-vm/lima): the local Linux VM runtime.
-- [Mastercard/restapi](https://github.com/Mastercard/terraform-provider-restapi): the generic Terraform REST client used by the prototype to call the Mac helper.
+- [Mastercard/restapi](https://github.com/Mastercard/terraform-provider-restapi): the generic Terraform REST client used by the node module to call the Mac helper.
 
 <a name="community"></a>
 

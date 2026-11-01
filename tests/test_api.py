@@ -52,7 +52,11 @@ class APITests(unittest.TestCase):
 
     def test_health_is_authenticated_and_reports_capacity(self):
         self.assertEqual(self.call("GET", "/healthz", auth=False)[0], 401)
-        self.assertEqual(self.call("GET", "/healthz"), (200, {"status": "ok", "max_nodes": 8}))
+        status, body = self.call("GET", "/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["max_nodes"], 8)
+        self.assertEqual(body["worker_size"], {"cpus": 1, "memory_gib": 2, "disk_gib": 30})
+        self.assertEqual(body["config_id"], server.configuration_id(self.manager.config))
 
     def test_create_read_repair_and_idempotent_delete(self):
         data = request()

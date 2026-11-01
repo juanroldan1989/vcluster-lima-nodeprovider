@@ -4,7 +4,7 @@ Thank you for helping improve Lima NodeProvider for vCluster. Documentation corr
 
 ## Start here
 
-Read the [README](README.md), [roadmap](ROADMAP.md) and [Code of Conduct](CODE_OF_CONDUCT.md). The repository contains the helper, guest bootstrap adapter and offline tests. Platform deployment wiring and installation tooling are not yet included.
+Read the [README](README.md), [roadmap](ROADMAP.md) and [Code of Conduct](CODE_OF_CONDUCT.md). The repository contains the helper, guest bootstrap adapter, Platform integration and setup tooling. Read the [installation guide](docs/installation.md) before testing against real VMs.
 
 Use this repository's issue templates for bugs and feature requests. For a substantial change, describe the problem and proposed scope in an issue before implementing it. Sensitive reports belong in the process described in [SECURITY.md](SECURITY.md).
 
@@ -52,6 +52,18 @@ python3 scripts/check_repository.py
 ```
 
 The suite uses a fake executable and mocked guest operations. It requires no Lima installation, Platform access or external Python packages. The test workflow runs this suite on Python 3.11 through 3.14; a configured workflow is not evidence that a remote run has passed. See [local helper validation](docs/local-helper.md#try-the-offline-workflow) for the boundaries of these checks.
+
+## Testing the OpenTofu integration
+
+Install OpenTofu or Terraform 1.6 or newer plus OpenSSL, then run:
+
+```bash
+python3 tests/integration_platform.py
+# Select a specific binary if both are installed:
+python3 tests/integration_platform.py --terraform /path/to/tofu
+```
+
+This test opens a temporary loopback HTTPS listener and downloads the pinned Mastercard REST client. It exercises certificate verification, authentication, configurable sizing, UID-free Platform input, create/read, a clean plan, missing-VM repair and destroy using fake Lima. Credentials and OpenTofu state are temporary. It never contacts Platform or starts real VMs. The test workflow runs it with OpenTofu 1.10.6; local runs may use either supported CLI.
 
 ## Running lint and security checks
 

@@ -29,3 +29,24 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Exercise helper without VMs
         run: python3 -m unittest discover -s tests -v
+
+  platform-integration:
+    name: OpenTofu and HTTPS with fake Lima
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: "1.10.6"
+          tofu_wrapper: false
+      - name: Exercise module and authenticated HTTPS lifecycle
+        run: python3 tests/integration_platform.py --terraform tofu

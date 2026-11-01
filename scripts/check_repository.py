@@ -22,7 +22,7 @@ def main():
     for path in sorted(ROOT.rglob("*")):
         if not path.is_file() or any(part in {".git", ".local", ".venv", "__pycache__"} for part in path.relative_to(ROOT).parts):
             continue
-        if path.suffix not in {".md", ".py", ".json", ".yml", ".yaml"} and path.name not in {".gitignore", ".editorconfig"}:
+        if path.suffix not in {".md", ".py", ".json", ".yml", ".yaml", ".sh", ".tmpl"} and path.name not in {".gitignore", ".editorconfig"}:
             continue
         source = path.read_text()
         relative = path.relative_to(ROOT)
