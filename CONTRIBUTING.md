@@ -4,7 +4,7 @@ Thank you for helping improve Lima NodeProvider for vCluster. Documentation corr
 
 ## Start here
 
-Read the [README](README.md), [roadmap](ROADMAP.md) and [Code of Conduct](CODE_OF_CONDUCT.md). Phase 1 contains project documentation; no runtime setup, installer, or provider test suite is available in this repository yet.
+Read the [README](README.md), [roadmap](ROADMAP.md) and [Code of Conduct](CODE_OF_CONDUCT.md). The repository contains the helper, guest bootstrap adapter and offline tests. Platform deployment wiring and installation tooling are not yet included.
 
 Use this repository's issue templates for bugs and feature requests. For a substantial change, describe the problem and proposed scope in an issue before implementing it. Sensitive reports belong in the process described in [SECURITY.md](SECURITY.md).
 
@@ -20,7 +20,7 @@ Use descriptive commit subjects. This project uses prefixes such as `docs:`, `fe
 
 ## Engineering standards
 
-As runtime code is introduced:
+For runtime code:
 
 - Keep Platform integration, VM lifecycle operations and guest bootstrap responsibilities explicit.
 - Document API inputs, configuration defaults, lifecycle ownership and recovery behavior.
@@ -44,11 +44,36 @@ For documentation-only changes:
 
 For runtime changes, include checks appropriate to the behavior being changed. Unit tests should use fake external commands where practical. Tests that create real VMs or touch a live cluster must be explicitly documented and opt-in. Add reproducible regression coverage for lifecycle bugs and distinguish VM creation, completed bootstrap and Kubernetes Node readiness.
 
-Document test commands alongside the implementation when it is introduced. Until then, do not add successful-build badges or commands for nonexistent test suites.
+Run the offline checks from the repository root with Python 3.11 or newer:
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/check_repository.py
+```
+
+The suite uses a fake executable and mocked guest operations. It requires no Lima installation, Platform access or external Python packages. The test workflow runs this suite on Python 3.11 through 3.14; a configured workflow is not evidence that a remote run has passed. See [local helper validation](docs/local-helper.md#try-the-offline-workflow) for the boundaries of these checks.
+
+## Running lint and security checks
+
+The offline tests need no external Python packages. Lint and security checks use the optional tools pinned in [requirements-dev.txt](requirements-dev.txt). Install them in a local virtual environment:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m ruff check helper tests scripts
+.venv/bin/python scripts/check_repository.py
+.venv/bin/python -m bandit -r helper -ll
+```
+
+Ruff checks Python errors and unused code. The repository checker validates syntax, local Markdown links, image references and basic formatting. Bandit scans `helper/` for medium- and high-severity findings; tests are outside that runtime scan. Static scanning does not validate the whole trust model or replace review of the trusted guest bootstrap boundary.
+
+Separate [test](.github/workflows/test.yml), [lint](.github/workflows/lint.yml) and [security](.github/workflows/security.yml) workflows run on pull requests, pushes to `main` and manual dispatch. They do not provision VMs or use Platform credentials. Acceptance testing of real workers remains planned; see the [roadmap](ROADMAP.md).
+
+The README's workflow badges follow [GitHub's status badge format](https://docs.github.com/en/actions/how-tos/monitor-workflows/add-a-status-badge). Each badge links to this repository's corresponding workflow and displays the result for `main`. Adding a badge does not create a check or make it pass; a workflow must run on GitHub first. The gray acceptance badge links to the roadmap and does not claim a successful run.
 
 ## Opening a pull request
 
-Explain what changed, why it matters, which roadmap phase it supports and how it was validated. Call out limitations or configuration migration where relevant. The pull request template provides space for that evidence.
+Explain what changed, why it matters, which roadmap goal it supports and how it was validated. Call out limitations or configuration migration where relevant. The pull request template provides space for that evidence.
 
 Review is performed by the repository maintainer. No response-time commitment or contributor agreement bot is configured as part of the initial foundation.
 

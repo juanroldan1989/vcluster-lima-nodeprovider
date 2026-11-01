@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Include only redacted information. Follow SECURITY.md for sensitive reports.
-        The repository is being built in phases; identify the documentation or code revision you tested.
+        Identify the documentation or code revision you tested.
   - type: textarea
     id: problem
     attributes:

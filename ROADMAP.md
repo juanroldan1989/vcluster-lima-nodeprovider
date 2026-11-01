@@ -11,13 +11,13 @@ The project is being extracted from a working local experiment in small phases. 
 
 ## Phase 2 — Local helper lifecycle
 
-- [ ] Introduce the helper and worker bootstrap adapter without importing generated lab state.
-- [ ] Define the authenticated API, ownership records, retry behavior and deletion contract.
-- [ ] Document the trusted local execution boundary and bootstrap limitations.
-- [ ] Bring over meaningful unit tests using a fake Lima executable.
-- [ ] Add automated checks for the code introduced in this phase.
+- [x] Introduce the helper and worker bootstrap adapter without importing generated lab state.
+- [x] Define the authenticated API, ownership records, retry behavior and deletion contract.
+- [x] Document the trusted local execution boundary and bootstrap limitations.
+- [x] Bring over meaningful unit tests using a fake Lima executable.
+- [x] Add automated checks for the code introduced in this phase.
 
-Exit criterion: helper behavior can be exercised without starting real VMs or requiring Platform.
+Exit criterion met by the offline suite: helper behavior can be exercised without starting real VMs or requiring Platform. See the [local helper guide](docs/local-helper.md) for coverage and limits.
 
 ## Phase 3 — Platform integration
 

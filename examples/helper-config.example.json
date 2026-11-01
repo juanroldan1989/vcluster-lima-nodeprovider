@@ -1,0 +1,11 @@
+{
+  "listen_host": "127.0.0.1",
+  "port": 18443,
+  "max_nodes": 8,
+  "state_dir": "nodes",
+  "limactl": "/opt/homebrew/bin/limactl",
+  "token_file": "api-token",
+  "cert_file": "server.crt",
+  "key_file": "server.key",
+  "platform_hosts": ["platform.example.test"]
+}

@@ -4,7 +4,7 @@ Describe the problem and resulting behavior. Link a related issue if applicable.
 
 ## Scope
 
-Which roadmap phase does this support? Keep unrelated changes separate.
+Describe the scope of this change. Keep unrelated changes separate.
 
 ## Validation
 
