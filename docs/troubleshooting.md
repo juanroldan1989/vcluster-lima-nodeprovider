@@ -14,6 +14,7 @@ Run commands from the repository root. Examples use the default private director
 | Helper | [Old worker sizing or capacity limits](#helper-uses-old-sizing-or-limits) |
 | Connectivity | [Platform cannot reach the helper](#platform-cannot-reach-the-helper) |
 | Deployment | [Existing provider, template or credential Secret](#resolve-existing-resource-conflicts) |
+| Versions | [Platform reports a newer vCluster version](#platform-reports-a-new-vcluster-version) |
 | Cleanup | [Inactive resources from an older installation](#remove-inactive-resources-from-an-older-setup) |
 | Tenant creation | [Cannot find an allowed template](#tenant-creation-cannot-find-an-allowed-template) |
 | Diagnostics | [Subprocess failure without detailed output](#a-subprocess-fails-without-detailed-output) |
@@ -112,6 +113,21 @@ Copy the recovery commands printed by `deploy` and run them from the repository 
 These commands reuse the private directory and credentials. If this installation has managed workers, remove its tenants and wait for worker cleanup before changing names.
 
 After a blocked deployment, `status` may show a healthy helper but `No resources found.` for NodeProviders or NodeClaims. Helper readiness and provider installation are separate stages.
+
+## Platform reports a new vCluster version
+
+The UI compares a template or tenant's vCluster chart version with Platform's default. This project's installer pins **0.37.4** by default. Updating the installer does not change older prepared configuration, installed templates or running tenants.
+
+For a fresh installation, follow the normal preparation steps. To select a different published version, include `--chart-version VERSION` with your complete preparation settings. If you already prepared an older version, regenerate and deploy the template after removing managed workers as described in [Change the worker profile or shared cap](installation.md#change-the-worker-profile-or-shared-cap).
+
+For existing tenants, update their installed template's `spec.template.helmRelease.chart.version` to the intended version, keeping its source manifest aligned. An unversioned template change requires a one-time sync on each tenant; changing the template alone does not upgrade it. For an existing `lima-demo-a` tenant in project `default`:
+
+```bash
+kubectl --context k3d-host-cluster -n p-default patch virtualclusterinstance lima-demo-a \
+  --type=merge -p '{"spec":{"templateRef":{"syncOnce":true}}}'
+```
+
+Apply this only after reviewing all pending template changes; the sync applies the resolved template configuration. Platform resets `syncOnce` after resolution. Wait for the tenant control plane to become Ready and confirm its running image uses the target version before taking screenshots. Template version numbers and the vCluster chart version are separate settings. See [upstream template propagation](https://www.vcluster.com/docs/platform/administer/templates/versioning#how-template-changes-propagate-to-existing-resources).
 
 ## Remove inactive resources from an older setup
 

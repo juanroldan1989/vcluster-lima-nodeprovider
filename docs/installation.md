@@ -12,7 +12,9 @@ This guide installs the provider into an existing vCluster Platform. It does not
 - The vCluster CLI logged into Platform, with permission to create and delete tenants in your chosen project. That project must allow the template ID you install.
 - Platform able to reach the Mac helper over HTTPS and Lima guests able to reach Platform's registration endpoint.
 
-The prototype used Platform 4.12.1, vCluster 0.37.1 and Lima 2.1.0 on macOS ARM64. The generated tenant chart defaults to 0.37.1. These are starting versions for this experimental integration, not a supported version matrix.
+The generated tenant chart defaults to **0.37.4**. Set `--chart-version VERSION` during preparation to select another explicit chart version. This pin does not automatically follow future Platform defaults or upgrade existing tenants; see [version mismatch troubleshooting](troubleshooting.md#platform-reports-a-new-vcluster-version).
+
+The original prototype used Platform 4.12.1, vCluster 0.37.1 and Lima 2.1.0 on macOS ARM64. Historical test versions remain recorded below; they are not a supported version matrix.
 
 Platform executes OpenTofu inside its own environment. Installing OpenTofu on the Mac is optional unless you want to run the [module integration test](../CONTRIBUTING.md#testing-the-opentofu-integration). See the upstream [Terraform NodeProvider documentation](https://www.vcluster.com/docs/platform/administer/node-providers/terraform) for the Platform lifecycle and credential discovery contract.
 

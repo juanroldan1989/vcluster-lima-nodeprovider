@@ -41,6 +41,8 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(config["worker_size"], {"cpus": 2, "memory_gib": 4, "disk_gib": 40})
         provider = (self.directory / "node-provider.yaml").read_text()
         tenant = (self.directory / "tenant-template.yaml").read_text()
+        self.assertEqual(config["platform"]["chart_version"], "0.37.4")
+        self.assertIn("version: 0.37.4", tenant)
         self.assertIn("maxCapacity: 12", provider)
         self.assertIn('cpu: "2"', provider)
         self.assertIn("memory: 4Gi", provider)
@@ -51,6 +53,14 @@ class SetupTests(unittest.TestCase):
         self.assertIn("memory: 12Gi", tenant)
         self.assertNotIn("@@", provider + tenant)
         self.assertNotIn("__WORKER_", (self.directory / "node.tf").read_text())
+
+    def test_explicit_chart_version_is_preserved_in_configuration_and_template(self):
+        self.args.chart_version = "0.37.5"
+        config = self.prepare()
+        self.assertEqual(config["platform"]["chart_version"], "0.37.5")
+        tenant = (self.directory / "tenant-template.yaml").read_text()
+        self.assertIn("version: 0.37.5", tenant)
+        self.assertNotIn("version: 0.37.4", tenant)
 
     def test_private_artifacts_and_credentials_survive_repeated_prepare(self):
         config = self.prepare()

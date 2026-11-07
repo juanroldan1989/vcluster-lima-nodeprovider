@@ -602,7 +602,7 @@ def parser():
     prepare_parser.add_argument("--pool-nodes", type=positive)
     for flag, default in (("platform-host", None), ("api-url", None), ("listen-host", WILDCARD_HOSTS[0]),
                           ("provider-name", "lima-local"), ("template-name", "private-nodes-lima-auto"),
-                          ("deployment", "loft"), ("chart-version", "0.37.1"), ("pod-cidr", "10.66.0.0/16"),
+                          ("deployment", "loft"), ("chart-version", "0.37.4"), ("pod-cidr", "10.66.0.0/16"),
                           ("service-cidr", "10.130.0.0/16"), ("limactl", None)):
         prepare_parser.add_argument("--" + flag, default=default)
     prepare_parser.add_argument("--lima-home", type=Path)

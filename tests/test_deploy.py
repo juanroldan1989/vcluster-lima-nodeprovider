@@ -26,7 +26,7 @@ class DeploymentGuidanceTests(unittest.TestCase):
             'pod_cidr': '10.66.0.0/16', 'service_cidr': '10.130.0.0/16',
             'platform': {'context': 'k3d-host-cluster', 'namespace': 'vcluster-platform',
                          'deployment': 'loft', 'provider': 'lima-local',
-                         'template': 'private-nodes-lima-auto', 'chart_version': '0.37.1'},
+                         'template': 'private-nodes-lima-auto', 'chart_version': '0.37.4'},
         }
 
     def test_all_conflicts_are_reported_before_platform_changes(self):
