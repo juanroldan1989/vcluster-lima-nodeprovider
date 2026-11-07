@@ -93,7 +93,7 @@ flowchart TB
 
 ### Scale-down follows the managed lifecycle in reverse
 
-Auto Nodes retires a worker, Platform destroys its managed resource and the helper deletes the associated Lima VM and ownership record. System Pods and disruption constraints can retain workers after application demand falls.
+Auto Nodes retires a worker, Platform destroys its managed resource and the helper deletes the associated Lima VM and ownership record. Auto Nodes evaluates Pod placement and disruption constraints before retiring a worker.
 
 ```mermaid
 flowchart TB

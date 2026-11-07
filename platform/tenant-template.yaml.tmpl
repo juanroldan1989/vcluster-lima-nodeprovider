@@ -25,7 +25,8 @@ spec:
                   nodeTypeSelector:
                     - property: vcluster.com/node-type
                       operator: In
-                      values: [@@NODE_TYPE@@]
+                      # Use the canonical Platform type so vCluster and Karpenter agree.
+                      values: [@@NODE_TYPE_REFERENCE@@]
                   # These are aggregate worker capacity limits for this tenant pool.
                   limits:
                     nodes: "@@POOL_NODES@@"

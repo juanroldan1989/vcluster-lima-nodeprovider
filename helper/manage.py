@@ -131,7 +131,8 @@ def render_manifests(config, directory, certificate):
     module = render_terraform(config["api_url"], certificate, worker)
     replacements = {
         "PROVIDER_NAME": platform["provider"], "TEMPLATE_NAME": platform["template"],
-        "NODE_TYPE": node_type, "HELPER_ID": helper_id(directory),
+        "NODE_TYPE": node_type, "NODE_TYPE_REFERENCE": platform["provider"] + "." + node_type,
+        "HELPER_ID": helper_id(directory),
         "CPUS": worker["cpus"], "MEMORY_GIB": worker["memory_gib"],
         "MAX_NODES": config["max_nodes"], "POOL_NODES": pool_nodes,
         "POOL_CPUS": pool_nodes * worker["cpus"], "POOL_MEMORY_GIB": pool_nodes * worker["memory_gib"],

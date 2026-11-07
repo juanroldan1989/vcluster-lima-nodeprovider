@@ -12,7 +12,7 @@ Screenshot placeholders follow the steps below. Fill in the [capture metadata](#
 | --- | --- | --- | --- |
 | Baseline | 1 | 1 | 2 |
 | Scale up | 2 | 2 | 4 |
-| Scale down | 1 | 1 after an empty worker is retired | 2 |
+| Scale down | 1 | 1 after consolidation | 2 |
 | Delete tenants | — | 0 | 0 |
 
 System Pods can retain workers. The scale-down checks below distinguish Pod removal, Kubernetes Node removal, NodeClaim deletion and actual VM deletion. A single successful observation is not a guarantee of an exact node count in every environment.
@@ -342,7 +342,7 @@ Auto Nodes initiates removal; Platform destroys the managed OpenTofu resource an
 >
 > Planned image: `docs/images/screenshots/lima-vms-scaled-down.png`.
 
-If a worker remains after demand falls, follow [scale-down troubleshooting](../../docs/troubleshooting.md#if-an-occupied-worker-remains) for the consolidation limitation and empty-worker fallback.
+If a worker remains after demand falls, follow [scale-down troubleshooting](../../docs/troubleshooting.md#if-an-occupied-worker-remains) for legacy type-label migration, disruption constraints and an optional empty-worker test.
 
 ## 6. Tear down before removing Platform
 

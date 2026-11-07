@@ -227,25 +227,64 @@ Preserve the record and reconcile the worker through Platform. Do not create an 
 
 ## If an occupied worker remains
 
-The generated policy is `WhenEmptyOrUnderutilized` with `consolidateAfter: 1m`. That delay is not a removal deadline. System Pods and disruption constraints can retain workers after an application replica is removed.
+The generated policy is `WhenEmptyOrUnderutilized` with `consolidateAfter: 1m`. That delay is not a removal deadline. Karpenter can reschedule eligible application Pods and Deployment-backed system Pods to consolidate occupied workers. DaemonSet Pods, such as kube-proxy and Flannel, do not by themselves make a worker non-empty for consolidation. Capacity, scheduling requirements, PodDisruptionBudgets and disruption annotations can still block a move. See [Karpenter disruption](https://karpenter.sh/docs/concepts/disruption/).
 
-The prototype's initialization controller writes a short instance-type label, while Karpenter can expect a provider-qualified name for occupied-worker consolidation. An `Instance Type ... not found` warning can prevent Pod repacking. Empty-worker removal is the behavior the autoscaling example targets. Do not override the controller-managed label to force a result.
+### Instance type not found
 
-To test empty-worker removal without application placement affecting the outcome, temporarily remove all test replicas:
+A legacy template selected the short type name, such as `lima-local-1cpu-2gi`, through `vcluster.com/node-type`. Workers then received that short value in both type labels, while Karpenter identified the instance type as `lima-local.lima-local-1cpu-2gi`. This produced `Unconsolidatable` events reporting `Instance Type "lima-local-1cpu-2gi" not found`.
+
+The generated template now selects the canonical Platform ID, `<provider>.<node-type>`. The provider also omits the unused short `instance-type` property. Keep the provider-local type name in the NodeProvider definition; its globally qualified ID belongs in the tenant pool selector.
+
+### Migrate an existing tenant
+
+1. Update the repository, then repeat preparation with the same complete settings used for this installation. Preparation can regenerate manifests while worker records exist when those settings are unchanged. Run `./setup.sh deploy` to install the updated template.
+2. Apply a [one-time template sync](#platform-reports-a-new-vcluster-version) to the existing tenant. Confirm its node pool selector uses the canonical ID before repairing legacy labels:
+
+```bash
+kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig get nodepool lima-workers-dynamic \
+  -o jsonpath='{.spec.template.spec.requirements}'
+```
+
+3. Compare each existing worker with its matching Karpenter NodeClaim:
+
+```bash
+kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig get nodeclaims \
+  -o 'custom-columns=CLAIM:.metadata.name,NODE:.status.nodeName,TYPE:.metadata.labels.node\.kubernetes\.io/instance-type'
+kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig get nodes \
+  -L vcluster.com/node-type,node.kubernetes.io/instance-type
+```
+
+4. For a legacy worker with the short labels, repair **both** labels to the exact type shown on its matching NodeClaim. This example uses the default provider and worker profile; substitute the actual node and type for a custom installation:
+
+```bash
+kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig label node YOUR-LIMA-NODE \
+  vcluster.com/node-type=lima-local.lima-local-1cpu-2gi \
+  node.kubernetes.io/instance-type=lima-local.lima-local-1cpu-2gi --overwrite
+```
+
+Changing only `node.kubernetes.io/instance-type` is insufficient: vCluster can derive it again from the short `vcluster.com/node-type` label. The repair above is a one-time migration after updating the template. Fresh workers should initialize with both canonical labels automatically.
+
+Keep Platform and the helper running during migration. The selector change can trigger normal Karpenter drift replacement of legacy workers. Validate a fresh worker and a subsequent workload-driven scale-up/down cycle; a manual label repair alone does not establish that future provisioning is fixed. See the [occupied-worker regression record](autoscaling-validation.md#occupied-worker-consolidation-regression).
+
+### Other consolidation constraints
+
+Inspect tenant events for `Unconsolidatable` or `DisruptionBlocked` reasons. Check Pod requests against remaining allocatable resources, scheduling constraints, PodDisruptionBudgets and `karpenter.sh/do-not-disrupt` annotations. A system Pod managed by a Deployment needs a safe destination; its namespace alone does not make it immovable.
+
+To isolate empty-worker removal from Pod placement in the two-tenant example, temporarily remove its test replicas:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=0
 kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=0
 ```
 
-Repeat the [Node, claim, ownership and VM checks](../examples/autoscaling/README.md#5-reduce-demand-and-verify-vm-removal). System Pods may retain a baseline worker. Restore the application after observing cleanup:
+Repeat the [Node, claim, ownership and VM checks](../examples/autoscaling/README.md#5-reduce-demand-and-verify-vm-removal). Restore the application after observing cleanup:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
 kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
 ```
 
-Record whether scale-down succeeded at one replica or required the zero-replica step. Empty-worker deletion does not validate occupied-worker consolidation. See the [autoscaling validation record](autoscaling-validation.md) for the observed run; it did not require the fallback. The upstream [Auto Nodes configuration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/private-nodes/auto-nodes) documents disruption settings.
+A zero-replica test demonstrates empty-worker removal and does not resolve an instance-type mismatch. Record whether consolidation succeeded at one replica or required the zero-replica step. The upstream [Auto Nodes configuration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/private-nodes/auto-nodes) documents disruption settings.
 
 ## Teardown fails or times out
 

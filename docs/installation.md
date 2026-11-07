@@ -271,9 +271,9 @@ Use `--pod-cidr` and `--service-cidr` during preparation if these networks confl
 | `consolidationPolicy` | `WhenEmptyOrUnderutilized` |
 | `consolidateAfter` | `1m` |
 
-Auto Nodes handles scheduling and disruption decisions; the provider supplies the VM lifecycle. Actual removal depends on Auto Nodes, system Pods and disruption constraints. The one-minute setting is not a guarantee that a worker disappears one minute after scaling down.
+Auto Nodes handles scheduling and disruption decisions; the provider supplies the VM lifecycle. Actual removal depends on scheduling and disruption constraints. The one-minute setting is not a guarantee that a worker disappears one minute after scaling down.
 
-The prototype demonstrated empty-worker deletion. Its short instance-type labels prevented some occupied-worker consolidation; that limitation remains unresolved here.
+The generated pool selects the canonical Platform type ID, `<provider>.<node-type>`, so vCluster and Karpenter use matching instance-type labels. Existing tenants created with the older short selector need the [legacy type migration](troubleshooting.md#migrate-an-existing-tenant). The [occupied-worker regression](autoscaling-validation.md#occupied-worker-consolidation-regression) records the validation scope.
 
 For a complete two-tenant exercise with a workload, shared capacity controls and VM deletion checks, follow the [autoscaling example](../examples/autoscaling/README.md). The [autoscaling validation record](autoscaling-validation.md) documents the observed environment and results.
 
