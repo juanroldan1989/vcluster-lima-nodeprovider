@@ -1,21 +1,23 @@
-# Two-tenant autoscaling example
+# Tenant autoscaling example
 
-Run the same nginx Deployment in two independent vCluster tenants and observe each tenant provision and retire its own Lima workers. Both tenants share one provider and one Mac helper.
+Run an nginx Deployment in the `lima-demo-a` vCluster tenant and observe it provision and retire its Lima workers as demand changes.
 
-This is a live lab: the commands create real tenants and VMs. Read the [installation prerequisites](../../docs/installation.md#prerequisites) first. Run commands from the repository root.
+The same provisioning and removal lifecycle applies as you add more tenants. Each tenant has its own control plane and private workers, while all tenants using this installation share the NodeProvider and Mac helper capacity limits. More tenants do not increase that shared capacity: worker creation remains subject to each tenant pool's limits, the available NodeProvider slots and the CPU, memory and disk resources of the machine running this local lab, including vCluster Platform.
 
-Screenshot placeholders follow the steps below. Fill in the [capture metadata](#screenshot-capture-metadata) when adding images, then update the listed reuse locations.
+This is a live lab: the commands create a real tenant and VMs. Read the [installation prerequisites](../../docs/installation.md#prerequisites) first. Run commands from the repository root.
+
+The commands, screenshots and recording below use **`lima-demo-a`**, captured on 2026-11-07. See [capture metadata](#screenshot-capture-metadata) for the tested environment and capture details.
 
 ## What the example demonstrates
 
-| Stage | Ready replicas per tenant | Expected workers per tenant | Total managed VMs |
+| Stage | Ready replicas | Expected workers | Managed VMs for this tenant |
 | --- | --- | --- | --- |
-| Baseline | 1 | 1 | 2 |
-| Scale up | 2 | 2 | 4 |
-| Scale down | 1 | 1 after consolidation | 2 |
-| Delete tenants | — | 0 | 0 |
+| Baseline | 1 | 1 | 1 |
+| Scale up | 2 | 2 | 2 |
+| Scale down | 1 | 1 after consolidation | 1 |
+| Delete tenant | — | 0 | 0 |
 
-System Pods can retain workers. The scale-down checks below distinguish Pod removal, Kubernetes Node removal, NodeClaim deletion and actual VM deletion. A single successful observation is not a guarantee of an exact node count in every environment.
+Scheduling and disruption constraints can retain workers. The scale-down checks below distinguish Pod removal, Kubernetes Node removal, NodeClaim deletion and actual VM deletion. A single successful observation is not a guarantee of an exact node count in every environment.
 
 ## 1. Prepare the shared capacity budget
 
@@ -32,19 +34,17 @@ Use the [setup commands](../../docs/installation.md#prepare-and-deploy) with thi
 
 <a name="platform-nodeprovider"></a>
 
-> **Screenshot placeholder — Lima NodeProvider**
->
-> Show the provider in Platform's NodeProviders view with its ID, availability and 1 CPU / 2Gi worker node type visible.
->
-> Planned image: `docs/images/screenshots/platform-nodeprovider.png`.
+![Idle Lima NodeProvider with four available slots and zero claimed workers](../../docs/images/screenshots/lima-node-provider-shows-0-claimed-nodes.png)
+
+*The Lima provider is Available with four free worker slots and zero claimed nodes. This idle view was captured after tenant cleanup.*
 
 <a name="lima-auto-template"></a>
 
-> **Screenshot placeholder — Dynamic tenant template**
->
-> Show the installed template's provider reference and dynamic pool limits: two nodes, 2 CPUs and 4Gi per tenant for this example configuration.
->
-> Planned image: `docs/images/screenshots/lima-auto-template.png`.
+![Private Nodes Template Lima Auto in the Platform template catalog](../../docs/images/screenshots/lima-auto-template-list.png)
+
+*The installed template targets vCluster 0.37.4 and advertises two 1-CPU / 2Gi workers per tenant within four shared provider slots.*
+
+Use the generated manifest for the template configuration.
 
 Preparation is intended for a fresh installation or one whose managed workers have already been removed. It refuses configuration changes while ownership records remain. Use your complete settings if you change the defaults.
 
@@ -59,6 +59,7 @@ The commands below use these names. Substitute your own host context, project or
 | Connected cluster in Platform | `loft-cluster` |
 | NodeProvider | `lima-local` |
 | Tenant template | `private-nodes-lima-auto` |
+| Tenant | `lima-demo-a` |
 
 ### The three capacity controls
 
@@ -68,37 +69,45 @@ The commands below use these names. Substitute your own host context, project or
 | NodeProvider | Node type `maxCapacity: 4` | Platform's shared capacity setting for this node type across tenants. This provider exposes one worker shape. |
 | Mac helper | `max_nodes: 4` | The helper checks its ownership reservations and all `vclima-*` VMs in its Lima inventory before accepting another VM. |
 
-`--max-nodes` configures both the NodeProvider and helper. `--pool-nodes` generates the per-tenant node, CPU and memory limits. Two tenants can therefore each use two workers while sharing four provider slots.
+`--max-nodes` configures both the NodeProvider and helper. `--pool-nodes` generates the per-tenant node, CPU and memory limits. This tenant can therefore request at most two workers within the four shared provider slots. Other tenants using this installation consume the remaining shared slots; the limit is not a reservation for each tenant.
 
-Four workers represent **4 CPUs / 8Gi RAM / four 30Gi virtual disks**. This does not reserve host resources or account for Docker, macOS and unrelated VMs. The helper excludes unrelated VM names from its count; choose a budget your Mac can support. Use one helper for the shared budget.
+This example uses at most **2 CPUs / 4Gi RAM / two 30Gi virtual disks** for its workers. The full shared budget of four workers represents **4 CPUs / 8Gi RAM / four 30Gi virtual disks**. This does not reserve host resources or account for Docker, macOS and unrelated VMs. The helper excludes unrelated VM names from its count; choose a budget your Mac can support. Use one helper for the shared budget.
 
-## 2. Create two independent tenants
+## 2. Create the tenant
 
-Ensure your [project allows the template](../../docs/installation.md#1-allow-the-template-in-your-project), then create the tenants:
+Ensure your [project allows the template](../../docs/installation.md#1-allow-the-template-in-your-project), then create `lima-demo-a`:
 
 ```bash
 vcluster create lima-demo-a --driver platform \
   --template private-nodes-lima-auto \
   --project default --cluster loft-cluster --connect=false
-
-vcluster create lima-demo-b --driver platform \
-  --template private-nodes-lima-auto \
-  --project default --cluster loft-cluster --connect=false
 ```
 
-Each tenant has its own control plane, Kubernetes API and worker membership. They share the provider's capacity budget; their workers are not interchangeable nodes in one cluster. Tenant system Pods may request an initial worker before the application is deployed.
+The tenant has its own control plane, Kubernetes API and worker membership. Its workers belong to this tenant rather than a shared Kubernetes node pool. Tenant system Pods may request an initial worker before the application is deployed.
 
 <a name="default-project-tenants"></a>
 
-> **Screenshot placeholder — Default project tenants**
->
-> Show lima-demo-a and lima-demo-b running in the Default project after the baseline workers and nginx replicas are Ready.
->
-> Planned image: `docs/images/screenshots/default-project-tenants.png`.
+![Tenant A Running with one Auto Nodes worker](../../docs/images/screenshots/lima-demo-a-tenant-created.png)
 
-### Save private kubeconfigs
+*Tenant A is Running on vCluster 0.37.4 with one worker and Kubernetes v1.36.5.*
 
-Export a kubeconfig for each tenant so later commands target the intended cluster without switching your current context:
+### Creation checkpoints: Starting, pending first claim and control-plane availability
+
+![Tenant A in Starting state in the Default project](../../docs/images/screenshots/lima-demo-a-tenant-creation-in-progress.png)
+
+*Tenant A is Starting with Auto-Nodes tenancy while Platform creates its control plane.*
+
+![Tenant A control plane available while its first worker claim is pending](../../docs/images/screenshots/lima-demo-a-tenant-creation-in-progress-graph-view.png)
+
+*The hosted control plane and PVC exist while the first worker claim is pending. Control-plane availability precedes worker readiness.*
+
+![Tenant A status showing its first NodeClaim provisioning](../../docs/images/screenshots/lima-demo-a-tenant-node-claim-pending.png)
+
+*The Node Claim Pending condition reports provisioning for lima-demo-a-952f2. The control-plane steps have completed while the worker is being prepared.*
+
+### Save a private kubeconfig
+
+Export a kubeconfig for `lima-demo-a` so later commands target the tenant without switching your current context:
 
 ```bash
 umask 077
@@ -107,24 +116,20 @@ chmod 700 .local/autoscaling
 
 vcluster connect lima-demo-a --driver platform --project default --print --background-proxy=false \
   > .local/autoscaling/lima-demo-a.kubeconfig
-vcluster connect lima-demo-b --driver platform --project default --print --background-proxy=false \
-  > .local/autoscaling/lima-demo-b.kubeconfig
 
-chmod 600 .local/autoscaling/*.kubeconfig
+chmod 600 .local/autoscaling/lima-demo-a.kubeconfig
 ```
 
-These files contain credentials. Keep them in ignored `.local/` and do not paste their contents into an issue or validation record. The [vCluster connect reference](https://www.vcluster.com/docs/vcluster/cli/vcluster_connect) documents `--print` and command execution options.
+This file contains credentials. Keep it in ignored `.local/` and do not paste its contents into an issue or validation record. The [vCluster connect reference](https://www.vcluster.com/docs/vcluster/cli/vcluster_connect) documents `--print` and command execution options.
 
-## 3. Deploy one replica in each tenant
+## 3. Deploy one replica in the tenant
 
-Apply the same [workload.yaml](workload.yaml) to both tenants:
+Apply [workload.yaml](workload.yaml) to `lima-demo-a`:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig apply -f examples/autoscaling/workload.yaml
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig apply -f examples/autoscaling/workload.yaml
 
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default rollout status deployment/lima-scale-test --timeout=15m
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default rollout status deployment/lima-scale-test --timeout=15m
 ```
 
 | Container setting | Value | Purpose |
@@ -137,113 +142,98 @@ kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default rollou
 
 The scheduler uses requests to place Pods. This example needs no CPU stress generator: two idle nginx Pods still reserve more CPU than one worker provides. See [Kubernetes resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the scheduling distinction.
 
-Confirm one Ready application Pod and one Ready worker in each tenant:
+Confirm one Ready application Pod and one Ready worker in the tenant:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default get pods -l app=lima-scale-test -o wide
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig get nodes -o wide
-
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default get pods -l app=lima-scale-test -o wide
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig get nodes -o wide
 ```
 
 <a name="lima-demo-a-overview"></a>
 
-> **Screenshot placeholder — Tenant A overview**
->
-> Show lima-demo-a's graph or overview with its hosted control plane, Auto Nodes worker and Lima provider association at baseline.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-overview.png`.
+![Tenant A graph linking its control plane, storage and Lima provider](../../docs/images/screenshots/lima-demo-a-tenant-created-graph-view.png)
+
+*The overview connects the hosted control plane and PVC to the Lima Auto Nodes pool. The worker summary reports one Ready worker.*
 
 <a name="lima-demo-a-nodes-baseline"></a>
 
-> **Screenshot placeholder — Tenant A baseline worker**
->
-> Show lima-demo-a's Nodes view with one joined Lima worker in Ready state. Keep the worker name legible for later comparisons.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-nodes-baseline.png`.
+![Tenant A Nodes view with its first Ready Lima worker](../../docs/images/screenshots/lima-demo-a-node-baseline.png)
 
-<a name="lima-demo-b-nodes-baseline"></a>
+*The initial Lima worker is Ready and running Kubernetes v1.36.5. Its name can be matched to the original VM inventory.*
 
-> **Screenshot placeholder — Tenant B baseline worker**
->
-> Show lima-demo-b's Nodes view with one joined Lima worker in Ready state, using the same columns as tenant A.
->
-> Planned image: `docs/images/screenshots/lima-demo-b-nodes-baseline.png`.
+![One Ready nginx replica alongside tenant system Deployments](../../docs/images/screenshots/lima-demo-a-deployment-baseline.png)
 
-## 4. Scale up both tenants
+*The lima-scale-test Deployment has one Ready and available nginx replica alongside the tenant system Deployments.*
+
+![Tenant A nginx and system Pods running on the initial worker](../../docs/images/screenshots/lima-demo-a-pods-baseline.png)
+
+*The baseline nginx Pod is Running and Ready. The Node column shows its placement on the initial Lima worker.*
+
+![Lima provider with one claimed worker and three available slots](../../docs/images/screenshots/lima-node-provider-shows-1-node-claimed-for-tenant-a.png)
+
+*One Lima worker is claimed and three of the four shared slots remain available. The expanded row identifies the provider-qualified worker type.*
+
+## 4. Scale up the tenant
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=2
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=2
 ```
 
-Capture provisioning while the new workers are being requested, before waiting for both rollouts to finish:
+Observe provisioning while the second worker is being requested, before waiting for the rollout to finish:
 
 <a name="nodeclaims-provisioning"></a>
 
-> **Screenshot placeholder — NodeClaims provisioning**
->
-> Capture the extra NodeClaims while they are Pending or Provisioning after both Deployments are scaled to two replicas. Keep tenant associations visible.
->
-> Planned image: `docs/images/screenshots/nodeclaims-provisioning.png`.
+### Additional scale-up checkpoints: Pending Pod and worker registration
+
+![Nginx Deployment requesting two replicas with one Ready](../../docs/images/screenshots/lima-demo-a-deployment-scaled-up.png)
+
+*The Deployment now requests two replicas, but only one is Ready while additional worker capacity is provisioned.*
+
+![Second nginx Pod Pending while the original Pod remains Running](../../docs/images/screenshots/lima-demo-a-tenant-second-pod-scheduled-requires-new-node.png)
+
+*The additional nginx Pod is Pending without an assigned node. Its CPU request cannot fit alongside the original replica on one worker.*
+
+![Original Lima worker Ready while the new worker is NotReady](../../docs/images/screenshots/lima-demo-a-tenant-second-node-not-ready.png)
+
+*The new worker is registered in the tenant but still NotReady. Registration and Kubernetes readiness are separate checkpoints.*
+
+![Tenant A graph with a second worker claim pending](../../docs/images/screenshots/lima-demo-a-tenant-graph-view-second-node-claim-triggered.png)
+
+*The original worker remains Ready while Auto Nodes requests another worker to satisfy the Pending Pod.*
+
+![Tenant A graph showing one Ready worker and one Pending worker](../../docs/images/screenshots/lima-demo-a-tenant-graph-view-second-node-joining.png)
+
+*The second worker has entered the joining flow. The summary shows one Ready worker and one Pending worker.*
 
 Then wait for application readiness:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default rollout status deployment/lima-scale-test --timeout=15m
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default rollout status deployment/lima-scale-test --timeout=15m
 ```
 
-Repeat the Pod and Node checks. Each tenant should now have two Ready replicas on separate workers.
+Repeat the Pod and Node checks. The tenant should now have two Ready replicas on separate workers.
 
 <a name="lima-demo-a-nodes-scaled-up"></a>
 
-> **Screenshot placeholder — Tenant A scaled-up workers**
->
-> Show two Ready Lima workers in lima-demo-a. Match the baseline view so the additional worker is easy to identify.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-nodes-scaled-up.png`.
+![Both Lima workers Ready in tenant A](../../docs/images/screenshots/lima-demo-a-tenant-second-node-ready.png)
 
-<a name="lima-demo-b-nodes-scaled-up"></a>
+*Both worker rows are Ready, with distinct names and internal IP addresses.*
 
-> **Screenshot placeholder — Tenant B scaled-up workers**
->
-> Show two Ready Lima workers in lima-demo-b using the same view as its baseline capture.
->
-> Planned image: `docs/images/screenshots/lima-demo-b-nodes-scaled-up.png`.
+![Tenant A graph showing two Ready Auto Nodes workers](../../docs/images/screenshots/lima-demo-a-tenant-graph-view-second-node-claim-completed.png)
+
+*The worker summary reports two Ready workers after the additional claim completes.*
 
 <a name="lima-demo-a-deployment"></a>
 
-> **Screenshot placeholder — Tenant A nginx Deployment**
->
-> Show lima-scale-test in lima-demo-a's Deployments view with two desired, Ready and available replicas.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-deployment.png`.
+![Nginx Deployment with two Ready and available replicas](../../docs/images/screenshots/lima-demo-a-deployment-running-2-replicas.png)
 
-<a name="lima-demo-b-deployment"></a>
-
-> **Screenshot placeholder — Tenant B nginx Deployment**
->
-> Show lima-scale-test in lima-demo-b's Deployments view with two desired, Ready and available replicas.
->
-> Planned image: `docs/images/screenshots/lima-demo-b-deployment.png`.
+*Scale-up has completed: both desired nginx replicas are Ready and available.*
 
 <a name="lima-demo-a-pods"></a>
 
-> **Screenshot placeholder — Tenant A Pod placement**
->
-> Show both Ready nginx Pods in lima-demo-a's default namespace with the Node column visible. The replicas should be on distinct workers.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-pods.png`.
+![Two Ready nginx Pods placed on distinct Lima workers](../../docs/images/screenshots/lima-demo-a-tenant-second-pod-scheduled-in-new-node.png)
 
-<a name="lima-demo-b-pods"></a>
-
-> **Screenshot placeholder — Tenant B Pod placement**
->
-> Show both Ready nginx Pods in lima-demo-b's default namespace with their associated worker names visible.
->
-> Planned image: `docs/images/screenshots/lima-demo-b-pods.png`.
+*Both nginx replicas are Running and Ready. Their Node column values confirm that each replica uses a different worker.*
 
 Also inspect the host-side claims and the actual VM inventory:
 
@@ -253,7 +243,7 @@ kubectl --context k3d-host-cluster -n p-default get nodeclaims.storage.loft.sh
 limactl list --format '{{.Name}} {{.Status}}'
 ```
 
-Record which NodeClaim belongs to each tenant and which VM belongs to that claim. The helper's private ownership records provide this mapping without containing bootstrap payloads:
+Record which NodeClaims belong to `lima-demo-a` and which VM belongs to each claim. The helper's private ownership records provide this mapping without containing bootstrap payloads:
 
 ```bash
 python3 - <<'PY'
@@ -266,40 +256,29 @@ for path in sorted(Path('.local/nodes').glob('*.json')):
 PY
 ```
 
-Use your configured ownership path if you changed `--state-dir`. Keep the VM names for the scale-down check. The inventory may also contain unrelated VMs; only count the VMs mapped to these two tenants.
+Use your configured ownership path if you changed `--state-dir`. Keep the VM names for the scale-down check. The inventory may also contain unrelated VMs; only count the VMs mapped to `lima-demo-a`.
 
 <a name="nodeclaims-available"></a>
 
-> **Screenshot placeholder — NodeClaims available**
->
-> Show four available Platform NodeClaims, two for each tenant, after all workers have joined. Correlate claim identities with the helper status capture.
->
-> Planned image: `docs/images/screenshots/nodeclaims-available.png`.
+Use the host-side commands above to correlate Platform claims with tenant worker names.
 
 <a name="helper-status"></a>
 
-> **Screenshot placeholder — Shared capacity and ownership**
->
-> Capture ./setup.sh status after scale-up. Show max_nodes: 4, the worker profile and the tenant/claim/VM mappings without displaying credential files.
->
-> Planned image: `docs/images/screenshots/helper-status.png`.
+Use `./setup.sh status` and the private ownership mapping above to verify the shared cap and claim-to-VM identities.
 
 <a name="lima-vms-scaled-up"></a>
 
-> **Screenshot placeholder — Four managed Lima VMs**
->
-> Capture limactl list on the Mac after scale-up. Keep all four mapped VM names and their Running state legible.
->
-> Planned image: `docs/images/screenshots/lima-vms-scaled-up.png`.
+![Lima inventory showing the two original tenant A VMs Running](../../docs/images/screenshots/limactl-list-shows-both-vms-running-for-tenant-a.png)
+
+*Lima lists the two original worker VMs as Running, each with 1 CPU, 2GiB RAM and a 30GiB virtual disk.*
 
 ## 5. Reduce demand and verify VM removal
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
 ```
 
-Wait for each Deployment to return to one Ready replica. Then repeat the tenant Node checks, host NodeClaim listing, helper status and Lima inventory listing.
+Wait for the Deployment to return to one Ready replica. Then repeat the tenant Node checks, host NodeClaim listing, helper status and Lima inventory listing.
 
 For each retired worker, confirm all four observations:
 
@@ -312,37 +291,21 @@ Auto Nodes initiates removal; Platform destroys the managed OpenTofu resource an
 
 <a name="lima-demo-a-nodes-scaled-down"></a>
 
-> **Screenshot placeholder — Tenant A after scale-down**
->
-> Show lima-demo-a with one remaining Ready worker after automatic removal. Use the same Nodes view as the baseline and scale-up captures.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-nodes-scaled-down.png`.
+![Nginx Deployment showing one Ready replica](../../docs/images/screenshots/lima-demo-a-deployment-scaled-down.png)
 
-<a name="lima-demo-b-nodes-scaled-down"></a>
-
-> **Screenshot placeholder — Tenant B after scale-down**
->
-> Show lima-demo-b with one remaining Ready worker after automatic removal, keeping its worker identity visible.
->
-> Planned image: `docs/images/screenshots/lima-demo-b-nodes-scaled-down.png`.
+*The Deployment view shows the reduced one-replica application state with one Ready and available nginx replica.*
 
 <a name="nodeclaims-scaled-down"></a>
 
-> **Screenshot placeholder — NodeClaims after scale-down**
->
-> Show only the two retained example claims, one per tenant. Compare the exact claim identities with the four-claim capture.
->
-> Planned image: `docs/images/screenshots/nodeclaims-scaled-down.png`.
+The [occupied-worker consolidation results](../../docs/autoscaling-validation.md#occupied-worker-consolidation) confirm that the retired Node, Platform claim, ownership record and exact VM were removed.
 
 <a name="lima-vms-scaled-down"></a>
 
-> **Screenshot placeholder — Two managed Lima VMs remain**
->
-> Capture limactl list after scale-down. Confirm the two retired VM names are absent and the retained names match the workers still shown in Platform.
->
-> Planned image: `docs/images/screenshots/lima-vms-scaled-down.png`.
+![Lima inventory with one Running VM after scale-down](../../docs/images/screenshots/limactl-list-shows-one-vm-running-for-tenant-a-after-scale-down.png)
 
-If a worker remains after demand falls, follow [scale-down troubleshooting](../../docs/troubleshooting.md#if-an-occupied-worker-remains) for legacy type-label migration, disruption constraints and an optional empty-worker test.
+*After scale-down, one Lima worker VM remains Running with 1 CPU, 2GiB RAM and a 30GiB virtual disk.*
+
+If a worker remains after demand falls, follow [scale-down troubleshooting](../../docs/troubleshooting.md#if-an-occupied-worker-remains) for type-label checks, disruption constraints and an optional empty-worker test.
 
 ## 6. Tear down before removing Platform
 
@@ -359,62 +322,72 @@ limactl list --format '{{.Name}} {{.Status}}'
 
 Teardown keeps the helper running until managed VM cleanup completes, then removes the provider resources, stops the helper and removes generated local files. `status` requires a prepared configuration, so the checks afterward use the host API and Lima directly.
 
-Confirm both tenants are gone and none of their claims, ownership records or mapped VMs remain. Unrelated tenants and manually managed VMs can remain in the output.
+Confirm `lima-demo-a` is gone and none of its claims, ownership records or mapped VMs remain. Unrelated tenants and manually managed VMs can remain in the output.
 
 <a name="default-project-teardown"></a>
 
-> **Screenshot placeholder — Default project after teardown**
->
-> Show that lima-demo-a and lima-demo-b are absent from the Default project after managed tenant deletion. Unrelated tenants can remain.
->
-> Planned image: `docs/images/screenshots/default-project-teardown.png`.
+![Tenant A listed as Terminating during managed deletion](../../docs/images/screenshots/lima-demo-a-tenant-being-terminated.png)
+
+*Platform shows tenant A as Terminating while its control plane, storage and remaining worker are being cleaned up.*
+
+![Default project tenant list empty after tenant A deletion](../../docs/images/screenshots/lima-demo-a-tenant-terminated.png)
+
+*Tenant A is absent from the Default project after managed tenant deletion completes.*
 
 <a name="nodeclaims-teardown"></a>
 
-> **Screenshot placeholder — NodeClaims after teardown**
->
-> Show that no Platform NodeClaims for either example tenant remain after deletion.
->
-> Planned image: `docs/images/screenshots/nodeclaims-teardown.png`.
+![Idle Lima NodeProvider with four available slots and zero claimed workers](../../docs/images/screenshots/lima-node-provider-shows-0-claimed-nodes.png)
+
+*After tenant deletion, the provider remains Available with zero claimed nodes and all four slots free. Full installation teardown removes the provider afterward.*
 
 <a name="lima-vms-teardown"></a>
 
-> **Screenshot placeholder — Mac inventory after teardown**
->
-> Capture limactl list after both tenants are deleted. All four example VM names must be absent; unrelated VMs may remain.
->
-> Planned image: `docs/images/screenshots/lima-vms-teardown.png`.
+![Lima reports no instances after the final tenant worker is deleted](../../docs/images/screenshots/limactl-list-shows-0-vms-running-after-tenant-a-deletion.png)
+
+*The selected Lima inventory reports No instance found after tenant deletion, confirming that no VM remains in that inventory.*
 
 See [Cleanup before removing Platform](../../docs/installation.md#cleanup-before-removing-platform) for the normal cleanup order and reinstallation steps. For legacy resources or interrupted cleanup, use the [troubleshooting guide](../../docs/troubleshooting.md#scenario-index).
 
+## Provider teardown recording
+
+The capture session deleted tenant A first, then ran `./setup.sh teardown` to remove the provider, template, credentials and local helper. A single teardown command can also remove the complete installation, as shown above.
+
+[![Watch the Lima provider disappear during teardown](../../docs/images/screenshots/lima-node-provider-teardown-poster.png)](../../docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mp4)
+
+*Watch the 4.2-second recording: the idle provider disappears from Nodes & Providers during full installation teardown. [Open MP4](../../docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mp4) · [Original MOV](../../docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mov).*
+
+![Empty provider table extracted from the teardown recording](../../docs/images/screenshots/lima-node-provider-after-teardown.png)
+
+*At approximately 3.2 seconds in the recording, the provider row has disappeared. This frame is extracted from the original footage.*
+
 ## Screenshot capture metadata
 
-All screenshot captures are pending. Keep tenant, claim and VM identities consistent throughout a capture run. Update this table when screenshots are taken; use a separate metadata block if images come from different runs.
+The captures show tenant A during provisioning, scaling and cleanup on 2026-11-07.
 
 | Field | Capture value |
 | --- | --- |
-| Capture date and run | Pending |
-| Host OS and CPU architecture | Pending |
-| vCluster Platform version | Pending |
-| Tenant chart and Kubernetes versions | Pending |
-| vCluster CLI and Lima versions | Pending |
-| Provider and template IDs | Pending |
-| Worker profile and capacity limits | Pending |
+| Capture date and scope | 2026-11-07, Europe/Amsterdam; lima-demo-a |
+| Host OS and CPU architecture | macOS, ARM64 |
+| vCluster Platform | 4.12.4 |
+| Tenant chart / Kubernetes | 0.37.4 / v1.36.5 |
+| vCluster CLI / Lima | 0.37.4 / 2.1.0 |
+| Provider / template | `lima-local` / `private-nodes-lima-auto` |
+| Worker profile | 1 CPU / 2Gi RAM / 30Gi disk |
+| Capacity limits | Four shared workers; two workers / 2 CPUs / 4Gi per tenant |
+| Recording | 4.193 seconds, 866 × 384; original MOV plus MP4 playback copy |
 
-The [asset directory guide](../../docs/images/screenshots/README.md) explains how to add each PNG and replace its callouts with embedded images. The [validation record](../../docs/autoscaling-validation.md) remains the source for the earlier measured run; future captures must identify their own run.
+The [asset catalog](../../docs/images/screenshots/README.md) describes the screenshots and recording formats. The [validation record](../../docs/autoscaling-validation.md) documents the observed autoscaling results.
 
 ### Reused display locations
 
-The walkthrough contains all 23 capture slots. These images also have placeholders in other documents; replace every corresponding callout when adding a capture.
-
-| Planned image | Additional display locations |
+| Capture | Additional display locations |
 | --- | --- |
-| `platform-nodeprovider.png` | [README showcase](../../README.md#screenshot-showcase), [installation](../../docs/installation.md#4-deploy-the-provider-and-inspect-its-status). |
-| `lima-auto-template.png` | [Installation template defaults](../../docs/installation.md#template-defaults). |
-| `default-project-tenants.png` | [README showcase](../../README.md#screenshot-showcase). |
-| `lima-demo-a-nodes-baseline.png` | [Installation worker readiness](../../docs/installation.md#4-confirm-readiness-inside-the-tenant). |
-| `lima-vms-scaled-up.png` | [README showcase](../../README.md#screenshot-showcase). |
-| `lima-vms-scaled-down.png` | [README showcase](../../README.md#screenshot-showcase). |
+| Idle / claimed provider | [README showcase](../../README.md#screenshot-showcase), [installation](../../docs/installation.md#4-deploy-the-provider-and-inspect-its-status), [helper lifecycle](../../docs/local-helper.md#platform-integration) |
+| Template catalog | [Installation template defaults](../../docs/installation.md#template-defaults) |
+| Dynamic pool configuration | [Type-selector troubleshooting](../../docs/troubleshooting.md#instance-type-not-found) |
+| Baseline worker | [Installation worker readiness](../../docs/installation.md#4-confirm-readiness-inside-the-tenant) |
+| Ready Pods and VM inventories | [README showcase](../../README.md#screenshot-showcase), [validation record](../../docs/autoscaling-validation.md#screenshot-references) |
+| Teardown recording | [README showcase](../../README.md#screenshot-showcase), [installation cleanup](../../docs/installation.md#cleanup-before-removing-platform) |
 
 ## Troubleshooting
 

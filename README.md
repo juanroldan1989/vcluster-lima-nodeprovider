@@ -19,7 +19,7 @@ A community Lima NodeProvider for vCluster Platform that dynamically provisions 
 
 **Early development.** The repository contains the authenticated helper, guest bootstrap adapter, OpenTofu node module, Platform manifests and setup commands. An [installation guide](docs/installation.md) covers provider deployment, tenant creation and managed cleanup. There is no packaged release yet.
 
-Live validation provisioned workers in two independent tenants, scaled from two to four managed VMs, then returned to two as application demand fell. Tenant deletion removed the remaining VMs and ownership records. The [two-tenant autoscaling example](examples/autoscaling/README.md) provides the workload, shared capacity budget, observation commands and managed teardown instructions. See the [worker validation record](docs/installation.md#validation-record), [autoscaling validation record](docs/autoscaling-validation.md) and [roadmap](ROADMAP.md) for evidence and remaining release work.
+Live validation scaled a tenant from one to two managed VMs, then returned to one as application demand fell. Tenant deletion removed its remaining VM and ownership record. The [tenant autoscaling example](examples/autoscaling/README.md) provides the workload, shared capacity budget, observation commands and managed teardown instructions. See the [worker validation record](docs/installation.md#validation-record), [autoscaling validation record](docs/autoscaling-validation.md) and [roadmap](ROADMAP.md) for evidence and remaining release work.
 
 This is an independent community project, maintained by [Juan Roldan](https://github.com/juanroldan1989). It is not an official vCluster or Lima distribution.
 
@@ -43,7 +43,7 @@ The intended audience is platform engineers, vCluster users and people building 
 - Preserve stable worker identity across retries and delete only VMs owned by this integration.
 - Provide explicit worker sizing and shared capacity controls suitable for a local Mac.
 - Make bootstrap progress, failures, recovery and cleanup understandable.
-- Provide a reproducible installation, a two-tenant scaling example and documented compatibility.
+- Provide a reproducible installation, a tenant autoscaling example and documented compatibility.
 
 <a name="scope"></a>
 
@@ -122,31 +122,23 @@ flowchart TB
 
 ## 📸 Screenshot showcase
 
-The following slots reserve space for captures from a real two-tenant run. The [autoscaling walkthrough](examples/autoscaling/README.md) contains the full capture sequence, planned filenames and capture metadata.
+See the provider, workload placement and automatic VM removal in action. The [walkthrough](examples/autoscaling/README.md) includes creation, provisioning, scale-up, scale-down and cleanup checkpoints.
 
-> **Screenshot placeholder — Lima NodeProvider**
->
-> Show the provider in Platform's NodeProviders view with its ID, availability and 1 CPU / 2Gi worker node type visible.
->
-> Planned image: `docs/images/screenshots/platform-nodeprovider.png` · [Capture details](examples/autoscaling/README.md#platform-nodeprovider).
+![Lima provider with one claimed worker and three available slots](docs/images/screenshots/lima-node-provider-shows-1-node-claimed-for-tenant-a.png)
 
-> **Screenshot placeholder — Default project tenants**
->
-> Show lima-demo-a and lima-demo-b running in the Default project after the baseline workers and nginx replicas are Ready.
->
-> Planned image: `docs/images/screenshots/default-project-tenants.png` · [Capture details](examples/autoscaling/README.md#default-project-tenants).
+*One Lima worker is claimed and three of the four shared slots remain available. The expanded row identifies the provider-qualified worker type.*
 
-> **Screenshot placeholder — Four managed Lima VMs**
->
-> Capture limactl list on the Mac after scale-up. Keep all four mapped VM names and their Running state legible.
->
-> Planned image: `docs/images/screenshots/lima-vms-scaled-up.png` · [Capture details](examples/autoscaling/README.md#lima-vms-scaled-up).
+![Two Ready nginx Pods placed on distinct Lima workers](docs/images/screenshots/lima-demo-a-tenant-second-pod-scheduled-in-new-node.png)
 
-> **Screenshot placeholder — Two managed Lima VMs remain**
->
-> Capture limactl list after scale-down. Confirm the two retired VM names are absent and the retained names match the workers still shown in Platform.
->
-> Planned image: `docs/images/screenshots/lima-vms-scaled-down.png` · [Capture details](examples/autoscaling/README.md#lima-vms-scaled-down).
+*Both nginx replicas are Running and Ready. Their Node column values confirm that each replica uses a different worker.*
+
+![Lima inventory with one Running VM after scale-down](docs/images/screenshots/limactl-list-shows-one-vm-running-for-tenant-a-after-scale-down.png)
+
+*After scale-down, one Lima worker VM remains Running with 1 CPU, 2GiB RAM and a 30GiB virtual disk.*
+
+[![Watch the Lima provider disappear during teardown](docs/images/screenshots/lima-node-provider-teardown-poster.png)](docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mp4)
+
+*Watch the 4.2-second recording: the idle provider disappears from Nodes & Providers during full installation teardown. [Open MP4](docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mp4) · [Original MOV](docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mov).*
 
 <a name="getting-started"></a>
 
@@ -186,7 +178,7 @@ The [installation guide](docs/installation.md#prepare-and-deploy) explains each 
 
 Follow [Create a tenant and observe a worker](docs/installation.md#create-a-tenant-and-observe-a-worker) to allow the template in your project, create a tenant and confirm its worker reaches Kubernetes `Ready`.
 
-To explore workload-driven scale-up and worker removal in two independent tenants, follow the [autoscaling example](examples/autoscaling/README.md). It uses one shared provider with a four-worker budget.
+To explore workload-driven scale-up and worker removal in a tenant, follow the [autoscaling example](examples/autoscaling/README.md). The tenant can use up to two workers from a shared four-worker provider budget.
 
 Provider deployment does not create a tenant or VM. After testing, remove the complete prepared installation with:
 

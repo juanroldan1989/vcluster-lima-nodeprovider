@@ -86,13 +86,13 @@ The README's workflow badges follow [GitHub's status badge format](https://docs.
 
 ## Validating the autoscaling example
 
-The [two-tenant walkthrough](examples/autoscaling/README.md) is an opt-in live test. It creates real tenants and up to four Lima workers, so review the worker profile and shared capacity budget before running it. Keep credentials under ignored `.local/` and remove workers through Platform before stopping the helper or removing the provider.
+The [tenant autoscaling walkthrough](examples/autoscaling/README.md) is an opt-in live test. It creates one real tenant and up to two Lima workers, so review the worker profile and shared capacity budget before running it. Keep credentials under ignored `.local/` and remove workers through Platform before stopping the helper or removing the provider.
 
 When recording results, include application readiness, Node and NodeClaim counts, ownership records and actual VM removal. Follow the structure in the [autoscaling validation record](docs/autoscaling-validation.md); do not publish kubeconfigs, state files or bootstrap logs. Documentation of a live test does not establish that GitHub acceptance automation exists.
 
 ## Adding screenshots
 
-Use the [autoscaling walkthrough](examples/autoscaling/README.md#screenshot-capture-metadata) for reserved filenames, capture instructions and display locations. Store captures under [docs/images/screenshots/](docs/images/screenshots/README.md), record the capture metadata and replace each named placeholder at all listed locations. Keep pending captures clearly labelled and preserve the historical validation record when adding images from a new run.
+Use the [asset catalog](docs/images/screenshots/README.md) for reviewed images, recording formats and reuse guidance. Store captures under `docs/images/screenshots/`, embed them beside the relevant instructions with short captions and update the [capture metadata](examples/autoscaling/README.md#screenshot-capture-metadata). Describe the visible resource state accurately and preserve historical validation results when adding new media.
 
 ## Opening a pull request
 

@@ -69,11 +69,9 @@ Preparation does not create a tenant or VM.
 
 `status` reports helper health, managed worker records and Platform provider, node type and NodeClaim resources. Tenant creation is covered in [Create a tenant and observe a worker](#create-a-tenant-and-observe-a-worker).
 
-> **Screenshot placeholder — Lima NodeProvider**
->
-> Show the provider in Platform's NodeProviders view with its ID, availability and 1 CPU / 2Gi worker node type visible.
->
-> Planned image: `docs/images/screenshots/platform-nodeprovider.png` · [Capture details](../examples/autoscaling/README.md#platform-nodeprovider).
+![Idle Lima NodeProvider with four available slots and zero claimed workers](images/screenshots/lima-node-provider-shows-0-claimed-nodes.png)
+
+*The Lima provider is Available with four free worker slots and zero claimed nodes. This idle view was captured after tenant cleanup.*
 
 ### Connection settings
 
@@ -240,11 +238,9 @@ Confirm the worker's status is **Ready**. Helper health and completed bootstrap 
 
 `vcluster connect` switches your kubeconfig context into the tenant. Use explicit `--context` for subsequent host commands.
 
-> **Screenshot placeholder — Tenant A baseline worker**
->
-> Example worker-readiness view from tenant A in the two-tenant walkthrough. This guide uses lima-demo for its single-tenant commands.
->
-> Planned image: `docs/images/screenshots/lima-demo-a-nodes-baseline.png` · [Capture details](../examples/autoscaling/README.md#lima-demo-a-nodes-baseline).
+![Tenant A Nodes view with its first Ready Lima worker](images/screenshots/lima-demo-a-node-baseline.png)
+
+*Example from the tenant A capture session: one joined Lima worker is Ready. This guide uses lima-demo in its commands.*
 
 ### Template defaults
 
@@ -258,11 +254,9 @@ Confirm the worker's status is **Ready**. Helper health and completed bootstrap 
 
 Use `--pod-cidr` and `--service-cidr` during preparation if these networks conflict with your environment. See the upstream [Auto Nodes configuration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/private-nodes/auto-nodes) for pool settings.
 
-> **Screenshot placeholder — Dynamic tenant template**
->
-> Show the generated dynamic pool and provider reference. The capture uses the autoscaling example's two-worker pool; installer defaults are documented above.
->
-> Planned image: `docs/images/screenshots/lima-auto-template.png` · [Capture details](../examples/autoscaling/README.md#lima-auto-template).
+![Private Nodes Template Lima Auto in the Platform template catalog](images/screenshots/lima-auto-template-list.png)
+
+*The installed template targets vCluster 0.37.4 and advertises two 1-CPU / 2Gi workers per tenant within four shared provider slots.*
 
 ### Worker removal behavior
 
@@ -273,9 +267,9 @@ Use `--pod-cidr` and `--service-cidr` during preparation if these networks confl
 
 Auto Nodes handles scheduling and disruption decisions; the provider supplies the VM lifecycle. Actual removal depends on scheduling and disruption constraints. The one-minute setting is not a guarantee that a worker disappears one minute after scaling down.
 
-The generated pool selects the canonical Platform type ID, `<provider>.<node-type>`, so vCluster and Karpenter use matching instance-type labels. Existing tenants created with the older short selector need the [legacy type migration](troubleshooting.md#migrate-an-existing-tenant). The [occupied-worker regression](autoscaling-validation.md#occupied-worker-consolidation-regression) records the validation scope.
+The generated pool selects the canonical Platform type ID, `<provider>.<node-type>`, so vCluster and Karpenter use matching instance-type labels. See [type-selector troubleshooting](troubleshooting.md#instance-type-not-found) if a worker cannot consolidate. The [occupied-worker consolidation test](autoscaling-validation.md#occupied-worker-consolidation) records the validation scope.
 
-For a complete two-tenant exercise with a workload, shared capacity controls and VM deletion checks, follow the [autoscaling example](../examples/autoscaling/README.md). The [autoscaling validation record](autoscaling-validation.md) documents the observed environment and results.
+For a complete tenant autoscaling exercise with a workload, shared capacity controls and VM deletion checks, follow the [autoscaling example](../examples/autoscaling/README.md). The [autoscaling validation record](autoscaling-validation.md) documents the observed environment and results.
 
 ## Private files and credentials
 
@@ -319,6 +313,16 @@ The command performs cleanup in this order:
 6. Removes generated configuration, credentials, certificates, manifests, logs and lab kubeconfigs under the installation's `autoscaling/` directory. Unrecognised local files are preserved.
 
 Platform itself, the host Kubernetes cluster, unrelated tenants and manually managed VMs stay available. Teardown does not bypass finalizers or delete VMs outside the managed helper lifecycle.
+
+### Teardown in Platform
+
+[![Watch the Lima provider disappear during teardown](images/screenshots/lima-node-provider-teardown-poster.png)](images/screenshots/lima-node-provider-removed-by-teardown-script.mp4)
+
+*Watch the 4.2-second recording: the idle provider disappears from Nodes & Providers during full installation teardown. [Open MP4](images/screenshots/lima-node-provider-removed-by-teardown-script.mp4) · [Original MOV](images/screenshots/lima-node-provider-removed-by-teardown-script.mov).*
+
+![Empty provider table extracted from the teardown recording](images/screenshots/lima-node-provider-after-teardown.png)
+
+*At approximately 3.2 seconds in the recording, the provider row has disappeared. This frame is extracted from the original footage.*
 
 ### Repeat the installation
 
@@ -393,4 +397,4 @@ Platform needs the referenced template while finalizing worker cleanup. Teardown
 
 The GitHub workflow is configured to repeat the integration test with **OpenTofu 1.10.6**. Local results do not establish that the remote workflow has passed.
 
-**Validation scope:** This smoke test covers one worker in one observed environment. For the separate two-tenant scaling exercise, see the [autoscaling validation record](autoscaling-validation.md). These observations do not establish a support guarantee. Automated live-worker acceptance remains planned.
+**Validation scope:** This smoke test covers one worker in one observed environment. For workload-driven scaling and consolidation results, see the [autoscaling validation record](autoscaling-validation.md). These observations do not establish a support guarantee. Automated live-worker acceptance remains planned.

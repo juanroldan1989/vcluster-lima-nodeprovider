@@ -117,6 +117,16 @@ Generated script output is redirected to the root-readable guest file `/var/log/
 
 The [installation guide](installation.md) documents the OpenTofu module, Platform resources, private credentials and managed cleanup. The offline checks do not modify Platform objects or live VMs. Run `python3 tests/integration_platform.py` to exercise the real module over TLS against fake Lima; it creates no VMs but requires a provider download and a local listening socket.
 
-The [two-tenant autoscaling example](../examples/autoscaling/README.md) demonstrates the shared budget, worker observations and cleanup. Use the [troubleshooting scenario index](troubleshooting.md#scenario-index) for helper errors, capacity issues and interrupted operations.
+The [tenant autoscaling example](../examples/autoscaling/README.md) demonstrates the shared budget, worker observations and cleanup. Use the [troubleshooting scenario index](troubleshooting.md#scenario-index) for helper errors, capacity issues and interrupted operations.
 
 Use `./setup.sh teardown` for complete managed cleanup. It preserves the helper and credentials until its mapped workers are gone, then removes generated local files. See the [teardown guide](installation.md#cleanup-before-removing-platform) for scope and the [troubleshooting guide](troubleshooting.md#teardown-fails-or-times-out) for recovery.
+
+### Provider and VM observations
+
+![Lima provider with one claimed worker and three available slots](images/screenshots/lima-node-provider-shows-1-node-claimed-for-tenant-a.png)
+
+*One Lima worker is claimed and three of the four shared slots remain available. The expanded row identifies the provider-qualified worker type.*
+
+![Lima reports no instances after the final tenant worker is deleted](images/screenshots/limactl-list-shows-0-vms-running-after-tenant-a-deletion.png)
+
+*The selected Lima inventory reports No instance found after tenant deletion, confirming that no VM remains in that inventory.*

@@ -33,36 +33,32 @@ Exit criterion met by a manual smoke test on 2026-11-01: a fresh preparation pro
 ## Phase 4 — Reproducible autoscaling example
 
 - [x] Add a workload whose requests demonstrate worker scale-up.
-- [x] Document two independent tenants sharing the same Mac capacity budget.
+- [x] Document a tenant scaling within its pool limits and the shared Mac capacity budget.
 - [x] Record readiness, worker removal and actual Lima VM deletion.
 - [x] Explain the three capacity controls: tenant pool, NodeProvider and helper.
-- [x] Document download delays, bootstrap failures and the prototype's occupied-worker consolidation limitation.
+- [x] Document download delays, bootstrap failures and occupied-worker consolidation constraints.
 - [x] Document teardown before Platform removal and recovery from interrupted runs.
 
-Exit criterion met by the documented two-tenant exercise and a live run on 2026-11-01: the source workload scaled from two to four Ready workers, returned to two through automatic empty-worker deletion, then tenant teardown removed the remaining VMs. See the [walkthrough](examples/autoscaling/README.md) and [validation record](docs/autoscaling-validation.md) for the tested environment, observations, cleanup and limits.
+Exit criterion met by live validation: the current [tenant autoscaling example](examples/autoscaling/README.md) demonstrates one to two Ready workers, automatic consolidation back to one and managed VM cleanup. The [validation record](docs/autoscaling-validation.md) documents the observed environment, results and earlier shared-capacity validation.
 
 ## Phase 5 — Platform screenshots and project showcase
 
-Capture real resources created with this repository's [two-tenant example](examples/autoscaling/README.md), using consistent tenant and VM names throughout the screenshots.
+The current gallery covers **tenant A on 2026-11-07**, including intermediate provisioning states, VM inventory, cleanup and a provider-removal recording. The [tenant autoscaling example](examples/autoscaling/README.md) follows the same tenant through setup, scale-up, scale-down and teardown.
 
-- [x] Add named screenshot placeholders, captions and display locations across the README, installation guide and [autoscaling walkthrough](examples/autoscaling/README.md).
-- [ ] Capture the Lima NodeProvider in Platform's NodeProviders section, showing its availability and worker node type.
-- [ ] Capture the Default project with both testing tenants visible and running.
-- [ ] For each tenant, capture the Nodes section with the joined Lima workers and their Ready status.
-- [ ] For each tenant, capture the Deployments section with `lima-scale-test` and its desired, Ready and available replica counts.
-- [ ] For each tenant, capture the Pods section with the nginx replicas, readiness and associated worker names visible.
-- [ ] Capture a tenant overview or graph showing the hosted control plane, Auto Nodes workers and provider association.
-- [ ] Capture the tenant template's dynamic pool configuration and explain the worker profile, per-tenant limits and shared provider/helper cap alongside it.
-- [ ] Capture NodeClaims during provisioning and after they become available, correlating claims with the resulting tenant workers and Lima VMs.
-- [ ] Capture matching before-and-after views of scale-up: one replica and worker per tenant, then two replicas and workers per tenant.
-- [ ] Capture `limactl list` on the Mac with VM names matching the workers shown in Platform.
-- [ ] Capture scale-down evidence showing the retired workers and claims are gone, with a matching Mac inventory confirming their VMs were deleted.
-- [ ] Capture final teardown evidence showing the test tenants and their managed VMs have been removed.
-- [ ] Store images under `docs/images/screenshots/` with descriptive filenames, useful alt text and captions stating what each image demonstrates. Record the capture date and tested versions.
-- [ ] Keep credentials, kubeconfig contents and bootstrap logs out of captures. Crop unrelated resources so the screenshots focus on this project's lifecycle.
-- [ ] Add a concise screenshot showcase to the README and use the autoscaling walkthrough for the complete capture sequence.
+- [x] Replace the screenshot callouts with reviewed images, descriptions and recording links across the README, installation guide and autoscaling walkthrough.
+- [x] Show the Lima provider Available with zero and one claimed worker, including its node type.
+- [x] Capture tenant A creation, Running state, graph, Ready workers, nginx Deployments and Pod placement.
+- [x] Capture tenant A scale-up from one Ready replica and worker to two, including Pending and joining states.
+- [x] Capture the template catalog and explain worker sizing, tenant limits and shared provider capacity.
+- [x] Show two-worker VM inventory after scale-up and one-worker inventory after scale-down.
+- [x] Capture tenant termination, its absence from the Default project and an empty Lima inventory.
+- [x] Add the original provider-removal recording, an MP4 playback copy, a linked preview and an extracted final frame.
+- [x] Catalog the supplied assets, record dates and versions, add captions and review the captures for credentials or registration data.
+- [ ] Capture current template configuration with the canonical type selector visible.
+- [ ] Add dedicated Platform NodeClaim and helper-status captures correlating claims, ownership records and VMs.
+- [ ] Add a consistent tenant scale-down sequence with matched before/after worker and VM identities.
 
-Exit criterion: readers can visually follow provider setup, two-tenant provisioning, worker readiness, workload placement, scale-up, automatic VM removal and teardown using screenshots from a real run. The views agree on tenant, claim and VM identities and make the project's local autoscaling behavior easy to assess.
+Exit criterion: readers can visually follow provider setup, tenant provisioning, worker readiness, workload placement, automatic VM removal and teardown. The gallery is integrated; the remaining detailed configuration and lifecycle views above complete the showcase.
 
 ## Phase 6 — Linux host support
 
@@ -77,11 +73,11 @@ Make the same NodeProvider lifecycle available to developers using Linux hosts. 
 - [ ] Validate Lima VM-to-VM networking and tenant worker VPN connectivity with multiple workers on Linux.
 - [ ] Preserve the same tenant pool, NodeProvider and helper capacity controls, ownership checks, retry behavior and managed deletion contract on both operating systems.
 - [ ] Add platform-selection and service-management regression tests. Keep offline checks on Linux and macOS, then add opt-in real-worker validation on a Linux runner with the required virtualization capabilities.
-- [ ] Repeat the two-tenant exercise on the reference Linux host: fresh setup, Ready workers, nginx placement, dynamic scale-up, empty-worker scale-down and actual VM deletion during teardown.
+- [ ] Repeat the tenant autoscaling example on the reference Linux host: fresh setup, Ready workers, nginx placement, dynamic scale-up, empty-worker scale-down and actual VM deletion during teardown.
 - [ ] Include Linux service definitions, configuration, examples and tests in this repository. Document Linux prerequisites, installation, troubleshooting and cleanup without requiring files or custom resources from another project.
 - [ ] Update platform-specific names and documentation when Linux support is implemented. Publish the tested host/architecture/backend combinations and keep unsupported combinations explicit.
 
-Exit criterion: a developer on the documented Linux reference host can install this repository's provider, reproduce the two-tenant autoscaling example and confirm managed VM cleanup. Linux helper restarts preserve ownership, macOS regression checks pass and the compatibility record distinguishes real VM validation from offline tests. Linux support remains planned until these checks pass.
+Exit criterion: a developer on the documented Linux reference host can install this repository's provider, reproduce the tenant autoscaling example and confirm managed VM cleanup. Linux helper restarts preserve ownership, macOS regression checks pass and the compatibility record distinguishes real VM validation from offline tests. Linux support remains planned until these checks pass.
 
 ## Phase 7 — Experimental release
 

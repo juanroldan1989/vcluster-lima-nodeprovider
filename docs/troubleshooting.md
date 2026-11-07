@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Use this guide when installation, provisioning, scaling or cleanup does not behave as expected. For the normal workflow, follow the [installation guide](installation.md) or [two-tenant autoscaling example](../examples/autoscaling/README.md).
+Use this guide when installation, provisioning, scaling or cleanup does not behave as expected. For the normal workflow, follow the [installation guide](installation.md) or [tenant autoscaling example](../examples/autoscaling/README.md).
 
 Run commands from the repository root. Examples use the default private directory `.local/`, host context `k3d-host-cluster` and the autoscaling example's tenant names. Substitute your configured values. With a custom private directory, pass the same global `--state-dir` option before each setup command. If you configured `lima_home`, use that inventory when running `limactl` directly.
 
@@ -180,6 +180,10 @@ Inspect Platform status and events, private helper logs and the guest's root-rea
 
 Failed bootstrap leaves `ready: false` in the ownership record and retains the reservation and stable identity for a managed retry. Retry through Platform rather than erasing ownership state. Registration logs can contain secrets; inspect them privately.
 
+![Tenant A status showing its first NodeClaim provisioning](images/screenshots/lima-demo-a-tenant-node-claim-pending.png)
+
+*The Node Claim Pending condition reports provisioning for lima-demo-a-952f2. The control-plane steps have completed while the worker is being prepared.*
+
 ## Pods stay Pending
 
 Inspect Pod events inside the affected tenant. For tenant A in the autoscaling example:
@@ -190,9 +194,13 @@ kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default descri
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig get nodes -o wide
 ```
 
-Check Pod resource requests against worker allocatable capacity and the tenant pool's node, CPU and memory limits. Then check shared NodeProvider capacity and helper reservations. The [autoscaling example](../examples/autoscaling/README.md#the-three-capacity-controls) uses all four shared slots when both tenants run two replicas.
+Check Pod resource requests against worker allocatable capacity and the tenant pool's node, CPU and memory limits. Then check shared NodeProvider capacity and helper reservations. The [autoscaling example](../examples/autoscaling/README.md#the-three-capacity-controls) uses up to two of the four shared slots when lima-demo-a runs two replicas. Other tenants can consume the remaining slots.
 
 If a worker is still starting, follow [provisioning checks](#nodeclaim-stays-provisioning-or-bootstrap-fails). Pool limits permit capacity; they do not pre-create workers or guarantee resources on the Mac.
+
+![Second nginx Pod Pending while the original Pod remains Running](images/screenshots/lima-demo-a-tenant-second-pod-scheduled-requires-new-node.png)
+
+*The additional nginx Pod is Pending without an assigned node. Its CPU request cannot fit alongside the original replica on one worker.*
 
 ## Request returns capacity exhausted
 
@@ -204,7 +212,7 @@ Review the [capacity budgets](installation.md#understand-the-capacity-budgets) b
 
 ## A command or terminal was interrupted
 
-Leave Platform and the helper running. Reconnect using the [saved tenant kubeconfigs](../examples/autoscaling/README.md#save-private-kubeconfigs), inspect current replica counts and compare NodeClaims, ownership records and Lima VMs before continuing.
+Leave Platform and the helper running. Reconnect using the [saved tenant kubeconfig](../examples/autoscaling/README.md#save-a-private-kubeconfig), inspect current replica counts and compare NodeClaims, ownership records and Lima VMs before continuing.
 
 The launchd-managed helper keeps running when the terminal closes. If cleanup was interrupted, follow [teardown recovery](#teardown-fails-or-times-out).
 
@@ -235,6 +243,10 @@ A legacy template selected the short type name, such as `lima-local-1cpu-2gi`, t
 
 The generated template now selects the canonical Platform ID, `<provider>.<node-type>`. The provider also omits the unused short `instance-type` property. Keep the provider-local type name in the NodeProvider definition; its globally qualified ID belongs in the tenant pool selector.
 
+![Lima template configuration showing the dynamic pool and worker limits](images/screenshots/lima-auto-template.png)
+
+*The template view shows the dynamic pool, two-worker limit and VPN settings. Use the generated manifest for the current type selector.*
+
 ### Migrate an existing tenant
 
 1. Update the repository, then repeat preparation with the same complete settings used for this installation. Preparation can regenerate manifests while worker records exist when those settings are unchanged. Run `./setup.sh deploy` to install the updated template.
@@ -264,24 +276,22 @@ kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig label node YOUR-L
 
 Changing only `node.kubernetes.io/instance-type` is insufficient: vCluster can derive it again from the short `vcluster.com/node-type` label. The repair above is a one-time migration after updating the template. Fresh workers should initialize with both canonical labels automatically.
 
-Keep Platform and the helper running during migration. The selector change can trigger normal Karpenter drift replacement of legacy workers. Validate a fresh worker and a subsequent workload-driven scale-up/down cycle; a manual label repair alone does not establish that future provisioning is fixed. See the [occupied-worker regression record](autoscaling-validation.md#occupied-worker-consolidation-regression).
+Keep Platform and the helper running during migration. The selector change can trigger normal Karpenter drift replacement of legacy workers. Validate a fresh worker and a subsequent workload-driven scale-up/down cycle; a manual label repair alone does not establish that future provisioning is fixed. See the [occupied-worker consolidation results](autoscaling-validation.md#occupied-worker-consolidation).
 
 ### Other consolidation constraints
 
 Inspect tenant events for `Unconsolidatable` or `DisruptionBlocked` reasons. Check Pod requests against remaining allocatable resources, scheduling constraints, PodDisruptionBudgets and `karpenter.sh/do-not-disrupt` annotations. A system Pod managed by a Deployment needs a safe destination; its namespace alone does not make it immovable.
 
-To isolate empty-worker removal from Pod placement in the two-tenant example, temporarily remove its test replicas:
+To isolate empty-worker removal from Pod placement in the tenant autoscaling example, temporarily remove its test replicas:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=0
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=0
 ```
 
 Repeat the [Node, claim, ownership and VM checks](../examples/autoscaling/README.md#5-reduce-demand-and-verify-vm-removal). Restore the application after observing cleanup:
 
 ```bash
 kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
 ```
 
 A zero-replica test demonstrates empty-worker removal and does not resolve an instance-type mismatch. Record whether consolidation succeeded at one replica or required the zero-replica step. The upstream [Auto Nodes configuration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/private-nodes/auto-nodes) documents disruption settings.
