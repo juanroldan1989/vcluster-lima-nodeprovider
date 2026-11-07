@@ -4,7 +4,7 @@ Thank you for helping improve Lima NodeProvider for vCluster. Documentation corr
 
 ## Start here
 
-Read the [README](README.md), [roadmap](ROADMAP.md) and [Code of Conduct](CODE_OF_CONDUCT.md). The repository contains the helper, guest bootstrap adapter, Platform integration and setup tooling. Read the [installation guide](docs/installation.md) before testing against real VMs.
+Read the [README](README.md), [roadmap](ROADMAP.md) and [Code of Conduct](CODE_OF_CONDUCT.md). The repository contains the helper, guest bootstrap adapter, Platform integration and setup tooling. Read the [installation guide](docs/installation.md) before testing against real VMs. Use the [troubleshooting guide](docs/troubleshooting.md#scenario-index) for live-lab issues and recovery.
 
 Use this repository's issue templates for bugs and feature requests. For a substantial change, describe the problem and proposed scope in an issue before implementing it. Sensitive reports belong in the process described in [SECURITY.md](SECURITY.md).
 

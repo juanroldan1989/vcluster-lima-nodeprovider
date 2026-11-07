@@ -342,40 +342,22 @@ Auto Nodes initiates removal; Platform destroys the managed OpenTofu resource an
 >
 > Planned image: `docs/images/screenshots/lima-vms-scaled-down.png`.
 
-### If an occupied worker remains
-
-The generated policy is `WhenEmptyOrUnderutilized` with `consolidateAfter: 1m`. That delay is not a removal deadline. A system Pod can keep a worker occupied even after an application replica is removed.
-
-The prototype's initialization controller writes a short instance-type label, while Karpenter can expect a provider-qualified name for occupied-worker consolidation. An `Instance Type ... not found` warning can prevent Pod repacking. Empty-worker removal is the behavior this example targets. Do not override the controller-managed label to force a result.
-
-To test empty-worker removal without application placement affecting the outcome, temporarily remove all test replicas:
-
-```bash
-kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=0
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=0
-```
-
-Observe the same Node, claim, ownership and VM checks. System Pods may retain a baseline worker. Restore the original application after observing cleanup:
-
-```bash
-kubectl --kubeconfig .local/autoscaling/lima-demo-a.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
-kubectl --kubeconfig .local/autoscaling/lima-demo-b.kubeconfig -n default scale deployment/lima-scale-test --replicas=1
-```
-
-Record whether scale-down succeeded at one replica or required the zero-replica step. Do not report occupied-worker consolidation as validated by empty-worker deletion. See the [Auto Nodes configuration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/private-nodes/auto-nodes) for disruption settings.
+If a worker remains after demand falls, follow [scale-down troubleshooting](../../docs/troubleshooting.md#if-an-occupied-worker-remains) for the consolidation limitation and empty-worker fallback.
 
 ## 6. Tear down before removing Platform
 
-Keep Platform and the helper running while deleting the example tenants:
+Keep Platform available while removing the complete installation. This includes every tenant using its template or associated provider claims, so preview the scope if the provider serves additional tenants:
 
 ```bash
-vcluster delete lima-demo-a --driver platform --project default
-vcluster delete lima-demo-b --driver platform --project default
+./setup.sh teardown --dry-run
+./setup.sh teardown
 
-./setup.sh status
+kubectl --context k3d-host-cluster get virtualclusterinstances.storage.loft.sh -A
 kubectl --context k3d-host-cluster -n p-default get nodeclaims.storage.loft.sh
 limactl list --format '{{.Name}} {{.Status}}'
 ```
+
+Teardown keeps the helper running until managed VM cleanup completes, then removes the provider resources, stops the helper and removes generated local files. `status` requires a prepared configuration, so the checks afterward use the host API and Lima directly.
 
 Confirm both tenants are gone and none of their claims, ownership records or mapped VMs remain. Unrelated tenants and manually managed VMs can remain in the output.
 
@@ -403,7 +385,7 @@ Confirm both tenants are gone and none of their claims, ownership records or map
 >
 > Planned image: `docs/images/screenshots/lima-vms-teardown.png`.
 
-If you are also removing the provider, follow [Cleanup before removing Platform](../../docs/installation.md#cleanup-before-removing-platform) only after worker cleanup finishes. Remove the example kubeconfigs after they are no longer needed. Never discard helper ownership records or provider state while workers remain.
+See [Cleanup before removing Platform](../../docs/installation.md#cleanup-before-removing-platform) for the normal cleanup order and reinstallation steps. For legacy resources or interrupted cleanup, use the [troubleshooting guide](../../docs/troubleshooting.md#scenario-index).
 
 ## Screenshot capture metadata
 
@@ -434,18 +416,6 @@ The walkthrough contains all 23 capture slots. These images also have placeholde
 | `lima-vms-scaled-up.png` | [README showcase](../../README.md#screenshot-showcase). |
 | `lima-vms-scaled-down.png` | [README showcase](../../README.md#screenshot-showcase). |
 
-## Delays, failures and interrupted runs
+## Troubleshooting
 
-| Observation | What to check or do |
-| --- | --- |
-| First VM takes several minutes | Lima may need to download an Ubuntu image. Package installation, worker bootstrap and the nginx image pull add separate delays. |
-| Another claim waits behind provisioning | The helper serializes VM operations. A long bootstrap can delay another tenant's creation or deletion; readiness waits are bounded observations, not provisioning guarantees. |
-| Pods stay Pending | Inspect tenant Pod events, requests and pool limits, then check shared provider capacity and helper reservations. This example's four slots are fully used at two replicas in both tenants. |
-| Claim stays Provisioning or bootstrap fails | Inspect Platform status and the private guest log `/var/log/vcluster-lima-bootstrap.log`. Failed bootstrap retains a reservation and stable identity for managed retries. Do not publish unredacted registration logs. |
-| A command or terminal is interrupted | Leave Platform and the helper running. Reconnect using the saved kubeconfigs, inspect current replica counts and compare claims, ownership records and VMs before continuing. |
-| Helper process restarts | Reuse the same private configuration, certificate, token and ownership directory. `./setup.sh start` starts the service if needed; `check` verifies its configuration and Platform reachability. |
-| A managed VM is missing | An API read exposes the missing VM and a managed retry can recreate it. There is no independent repair loop; a stopped-but-existing VM is not currently detected as drift. |
-| Cleanup was interrupted | Retry deleting only the example tenants while Platform and the helper are available. Preserve provider credentials and ownership records until cleanup completes. Do not bypass finalizers or delete arbitrary VMs to hide a failed lifecycle operation. |
-| Platform was removed too early | Normal managed destroy can no longer run. Preserve remaining state and VM identities for manual reconciliation; reinstalling Platform alone does not reconstruct lost ownership or OpenTofu state. |
-
-For the observed environment and results, see the [autoscaling validation record](../../docs/autoscaling-validation.md). The [helper guide](../../docs/local-helper.md) explains the ownership and retry contract.
+Use the [scenario index](../../docs/troubleshooting.md#scenario-index) for provisioning delays, Pending Pods, capacity limits, interrupted runs and cleanup issues. The [autoscaling validation record](../../docs/autoscaling-validation.md) documents the observed environment and results.

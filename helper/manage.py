@@ -2,6 +2,7 @@
 """Prepare and deploy the local Lima NodeProvider without printing credentials."""
 import argparse
 import base64
+import errno
 import hashlib
 import http.client
 import ipaddress
@@ -11,7 +12,9 @@ from pathlib import Path
 import plistlib
 import re
 import secrets
+import shlex
 import shutil
+import socket
 import ssl
 import subprocess
 import sys
@@ -28,6 +31,7 @@ OWNER = "lima.automatalife.com/helper-id"
 # Platform must reach the TLS/authenticated helper from the host cluster.
 DEFAULT_LISTEN_HOST = "0.0.0.0"  # nosec B104
 WILDCARD_HOSTS = (DEFAULT_LISTEN_HOST, "::")
+STARTUP_TIMEOUT = 30
 
 
 def run(command, **kwargs):
@@ -295,19 +299,61 @@ def service_domain(config):
     return "gui/" + str(os.getuid()) + "/" + config["service_label"]
 
 
+def port_in_use(config):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            # Match HTTPServer's reuse behavior so TIME_WAIT is not a conflict.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            probe.bind((config["listen_host"], config["port"]))
+    except OSError as error:
+        if error.errno == errno.EADDRINUSE:
+            return True
+        raise RuntimeError("Cannot bind the helper listen address: " + str(error.strerror)) from None
+    return False
+
+
 def start(args):
     config = configuration(args)
     domain = service_domain(config)
     existing = subprocess.run(["launchctl", "print", domain], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    conflict = (
+        f"TCP port {config['port']} is already in use; its listener does not match this helper's "
+        "prepared TLS, credentials or configuration. "
+        f"Identify it with: lsof -nP -iTCP:{config['port']} -sTCP:LISTEN. "
+        "Stop the conflicting service, then run ./setup.sh stop and ./setup.sh start. "
+        "Alternatively, re-prepare with a free --port and your complete worker/capacity settings."
+    )
+    if port_in_use(config):
+        try:
+            status = health(config)
+        except (OSError, ValueError, http.client.HTTPException):
+            raise RuntimeError(conflict) from None
+        if existing.returncode:
+            raise RuntimeError(
+                f"TCP port {config['port']} already serves this helper outside its launchd service; "
+                "stop that foreground process before starting the service."
+            )
+        print("Helper health:", status)
+        return
     if existing.returncode:
         run(["launchctl", "bootstrap", domain.rsplit("/", 1)[0], str(local_directory(args) / "launchagent.plist")])
-    for _ in range(20):
+    print(f"Waiting for helper startup (up to {STARTUP_TIMEOUT}s)...")
+    deadline = time.monotonic() + STARTUP_TIMEOUT
+    while True:
         try:
             print("Helper health:", health(config))
             return
         except (OSError, urllib.error.URLError):
-            time.sleep(0.25)
-    raise RuntimeError("Helper did not become healthy; inspect its private helper.err file")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(0.5, remaining))
+    if port_in_use(config):
+        raise RuntimeError(conflict)
+    raise RuntimeError(
+        f"Helper did not become healthy within {STARTUP_TIMEOUT} seconds; "
+        f"inspect the private log: {local_directory(args) / 'helper.err'}"
+    )
 
 
 def kube(config, *command, namespace=None):
@@ -337,12 +383,132 @@ def check(args):
     print("Platform-to-helper TLS and authentication passed.")
 
 
-def ensure_owner(resource, directory):
+def ownership_conflict(resource, directory):
     if resource is None:
-        return
+        return None
     metadata = resource.get("metadata", {})
-    if metadata.get("labels", {}).get("app.kubernetes.io/managed-by") != MANAGER or metadata.get("annotations", {}).get(OWNER) != helper_id(directory):
-        raise ValueError("Refusing to overwrite an existing resource owned by another installation; choose distinct provider/template names")
+    labels = metadata.get("labels") or {}
+    annotations = metadata.get("annotations") or {}
+    reasons = []
+    if labels.get("app.kubernetes.io/managed-by") != MANAGER:
+        reasons.append("missing or different managed-by label")
+    if annotations.get(OWNER) != helper_id(directory):
+        reasons.append("missing or different installation ID")
+    if not reasons:
+        return None
+    identity = "/".join(filter(None, (resource.get("kind", "Resource"), metadata.get("namespace"), metadata.get("name", "unknown"))))
+    return identity + ": " + "; ".join(reasons)
+
+
+def ensure_owner(resource, directory):
+    conflict = ownership_conflict(resource, directory)
+    if conflict:
+        raise ValueError("Refusing to overwrite " + conflict)
+
+
+def setup_command(directory, action):
+    command = ["./setup.sh"]
+    if Path(directory).resolve() != (ROOT / ".local").resolve():
+        command.extend(["--state-dir", str(Path(directory).resolve())])
+    return [*command, action]
+
+
+def reprepare_command(config, directory, provider, template):
+    """Preserve prepared settings while suggesting different resource names."""
+    defaults = parser().parse_args(["prepare"])
+    platform = config["platform"]
+    command = setup_command(directory, "prepare")
+    global_options = []
+    for flag, actual, default in (("--context", platform["context"], "k3d-host-cluster"),
+                                  ("--namespace", platform["namespace"], "vcluster-platform")):
+        if actual != default:
+            global_options.extend([flag, actual])
+    command[-1:-1] = global_options
+    worker = config["worker_size"]
+    for flag, value in (("--platform-host", config["platform_hosts"][0]),
+                         ("--cpus", worker["cpus"]), ("--memory-gib", worker["memory_gib"]),
+                         ("--disk-gib", worker["disk_gib"]), ("--max-nodes", config["max_nodes"]),
+                         ("--pool-nodes", config["pool_nodes"]),
+                         ("--provider-name", provider), ("--template-name", template)):
+        command.extend([flag, str(value)])
+    for flag, value, default in (
+        ("--port", config["port"], defaults.port),
+        ("--api-url", config["api_url"], f"https://host.docker.internal:{config['port']}"),
+        ("--listen-host", config["listen_host"], defaults.listen_host),
+        ("--deployment", platform["deployment"], defaults.deployment),
+        ("--chart-version", platform["chart_version"], defaults.chart_version),
+        ("--pod-cidr", config["pod_cidr"], defaults.pod_cidr),
+        ("--service-cidr", config["service_cidr"], defaults.service_cidr),
+    ):
+        if value != default:
+            command.extend([flag, str(value)])
+    default_limactl = shutil.which("limactl")
+    if not default_limactl or Path(config["limactl"]).resolve() != Path(default_limactl).resolve():
+        command.extend(["--limactl", config["limactl"]])
+    if config.get("lima_home"):
+        command.extend(["--lima-home", config["lima_home"]])
+    return command
+
+
+def shell_command(command):
+    groups = []
+    index = 0
+    while index < len(command):
+        group = [str(command[index])]
+        if group[0].startswith("--") and index + 1 < len(command):
+            index += 1
+            group.append(str(command[index]))
+        groups.append(shlex.join(group))
+        index += 1
+    lines = []
+    line = "  "
+    for group in groups:
+        if line.strip() and len(line) + len(group) + 1 > 100:
+            lines.append(line + " " + chr(92))
+            line = "    " + group
+        else:
+            line += (" " if line.strip() else "") + group
+    return "\n".join([*lines, line])
+
+
+def deployment_conflict(config, directory, conflicts):
+    platform = config["platform"]
+    suffix = secrets.token_hex(3)
+    provider = platform["provider"][:33].rstrip("-") + "-" + suffix
+    template = platform["template"][:56].rstrip("-") + "-" + suffix
+    lines = [
+        f"Deployment blocked by {len(conflicts)} existing Platform " + ("resource." if len(conflicts) == 1 else "resources."),
+        f"Host context: {platform['context']}",
+        f"Installation directory: {Path(directory).resolve()}",
+        *["- " + conflict for conflict in conflicts],
+        "",
+        "These resources lack ownership metadata matching this installation.",
+        "Deployment stopped before changing any Platform resources.",
+        "",
+        "To remove your earlier setup and reuse the original names:",
+        shell_command([*setup_command(directory, "teardown"), "--dry-run"]),
+        shell_command(setup_command(directory, "teardown")),
+        "Cleanup deletes this installation's tenants and their data. Repeat prepare/start/check/deploy afterward.",
+        "For inactive older resources without ownership metadata, add --include-unmanaged to both commands.",
+        "Resources owned by another installation require its original private directory.",
+        "",
+        "To keep the existing resources, choose different names instead:",
+        "Run the following from the repository root; your current settings are preserved:",
+    ]
+    if list(Path(config["state_dir"]).glob("*.json")):
+        lines.append("First remove this installation's managed tenants and wait for worker cleanup.")
+    lines.extend([
+        shell_command(setup_command(directory, "stop")),
+        shell_command(reprepare_command(config, directory, provider, template)),
+        shell_command(setup_command(directory, "start")),
+        shell_command(setup_command(directory, "check")),
+        shell_command(setup_command(directory, "deploy")),
+        "",
+        f"When creating tenants, use --template {template} and allow that ID in your project.",
+        "",
+        "Guide: docs/troubleshooting.md#resolve-existing-resource-conflicts",
+    ])
+    return "\n".join(lines)
 
 
 def deploy(args):
@@ -350,10 +516,15 @@ def deploy(args):
     directory = local_directory(args)
     check(args)
     platform = config["platform"]
+    conflicts = []
     for resource, name, namespace in (("nodeproviders.storage.loft.sh", platform["provider"], None),
                                        ("virtualclustertemplates.storage.loft.sh", platform["template"], None),
                                        ("secret", platform["provider"] + "-credentials", platform["namespace"])):
-        ensure_owner(get_resource(config, resource, name, namespace), directory)
+        conflict = ownership_conflict(get_resource(config, resource, name, namespace), directory)
+        if conflict:
+            conflicts.append(conflict)
+    if conflicts:
+        raise ValueError(deployment_conflict(config, directory, conflicts))
     for filename in ("node-provider.yaml", "tenant-template.yaml", "credentials.json"):
         run(kube(config, "apply", "--dry-run=server", "-f", str(directory / filename)))
     secret = json.loads((directory / "credentials.json").read_text())
@@ -374,9 +545,12 @@ def status(args):
     for record in sorted(Path(config["state_dir"]).glob("*.json")):
         data = json.loads(record.read_text())
         print(data["vm_name"], "claim=" + data["claim"], "bootstrap-complete=" + str(data["ready"]))
-    for resource in ("nodeproviders.storage.loft.sh", "nodetypes.storage.loft.sh", "nodeclaims.storage.loft.sh"):
+    for title, resource in (("NodeProviders", "nodeproviders.storage.loft.sh"),
+                            ("Node types", "nodetypes.storage.loft.sh"),
+                            ("NodeClaims", "nodeclaims.storage.loft.sh")):
         result = run(kube(config, "get", resource, "-A"))
-        print(result.stdout.decode().strip())
+        print(title + ":")
+        print(result.stdout.decode().strip() or "No resources found.")
 
 
 def stop(args):
@@ -384,10 +558,31 @@ def stop(args):
     if list(Path(config["state_dir"]).glob("*.json")):
         raise ValueError("Managed nodes remain; deprovision them before stopping the helper")
     domain = service_domain(config)
-    existing = subprocess.run(["launchctl", "print", domain], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    existing = subprocess.run(["launchctl", "print", domain], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     if existing.returncode == 0:
+        process = re.search(rb"^\s*pid = ([0-9]+)\s*$", existing.stdout, re.M)
         run(["launchctl", "bootout", domain])
+        if process:
+            pid = int(process.group(1))
+            deadline = time.monotonic() + STARTUP_TIMEOUT
+            while True:
+                try:
+                    os.kill(pid, 0)  # Query this service's process; do not signal it.
+                except ProcessLookupError:
+                    break
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError(
+                        f"Helper service stop requested, but process {pid} has not exited; "
+                        "inspect the private helper.err log before restarting."
+                    )
+                time.sleep(min(0.1, remaining))
     print("Helper stopped; private credentials and state directory preserved.")
+
+
+def teardown(args):
+    from helper.cleanup import run_teardown
+    run_teardown(args)
 
 
 def parser():
@@ -397,6 +592,11 @@ def parser():
     result.add_argument("--namespace", help="Platform namespace saved by prepare")
     commands = result.add_subparsers(dest="command", required=True)
     prepare_parser = commands.add_parser("prepare")
+    teardown_parser = commands.add_parser("teardown", help="Remove this installation and its managed tenants/workers")
+    teardown_parser.add_argument("--dry-run", action="store_true", help="Preview without making changes")
+    teardown_parser.add_argument("--include-unmanaged", action="store_true", help="Include inactive legacy resources at the configured names")
+    teardown_parser.add_argument("--timeout", type=positive, default=900, help="Cleanup timeout in seconds")
+    teardown_parser.set_defaults(action=teardown)
     for flag, default in (("port", 18443), ("max-nodes", 8), ("cpus", 1), ("memory-gib", 2), ("disk-gib", 30)):
         prepare_parser.add_argument("--" + flag, type=positive, default=default)
     prepare_parser.add_argument("--pool-nodes", type=positive)

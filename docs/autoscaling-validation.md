@@ -62,4 +62,4 @@ The [autoscaling walkthrough](../examples/autoscaling/README.md#screenshot-captu
 
 The test checks application Ready replica counts, tenant Node readiness, Platform NodeClaims, helper ownership records and actual Lima VM inventory. Credential files, OpenTofu state, join payloads and guest logs are excluded from this public record.
 
-The helper serializes provisioning operations. Timing from one run does not establish a provisioning guarantee. System Pods and disruption constraints can retain workers; empty-worker deletion does not demonstrate successful repacking of occupied workers. See the [walkthrough's consolidation limitation](../examples/autoscaling/README.md#if-an-occupied-worker-remains).
+The helper serializes provisioning operations. Timing from one run does not establish a provisioning guarantee. System Pods and disruption constraints can retain workers; empty-worker deletion does not demonstrate successful repacking of occupied workers. See the [consolidation limitation and scale-down troubleshooting](troubleshooting.md#if-an-occupied-worker-remains).

@@ -171,7 +171,7 @@ Template changes do not automatically update existing tenant instances; update t
 
 In Platform project settings, ensure the target project's allowed templates include the generated template ID. An administrator can allow the specific ID; a project allowing `*` already includes it.
 
-Deploying a template does not grant project access or change this allowlist. If the CLI reports that it could not find an allowed template, check the project settings even when the template exists globally.
+Deploying a template does not change this allowlist. For template lookup errors, see [Tenant creation cannot find an allowed template](troubleshooting.md#tenant-creation-cannot-find-an-allowed-template).
 
 ### 2. Create the tenant
 
@@ -295,36 +295,47 @@ Generated credentials, ownership records, guest logs and OpenTofu state must sta
 
 ## Cleanup before removing Platform
 
-Delete only tenants created for this installation, using Platform or the CLI:
+Remove the whole prepared installation with one command:
 
 ```bash
-vcluster delete lima-demo --driver platform --project YOUR-PROJECT
-./setup.sh status
-limactl list
+./setup.sh teardown
 ```
 
-Keep Platform and the helper running until the tenant's NodeClaims disappear, its `nodes/*.json` records are gone and its associated `vclima-*` VMs are deleted. This allows Platform to run OpenTofu destroy and release ownership through `DELETE /nodes/<id>`. Manually deleting arbitrary Lima VMs does not clear Platform state or helper reservations.
-
-After managed cleanup, remove this installation's resources with the names saved during preparation:
+This deletes tenants using the configured template or associated provider NodeClaims, including their workloads and tenant data. Preview the exact scope first when needed:
 
 ```bash
-kubectl --context k3d-host-cluster delete virtualclustertemplate private-nodes-lima-auto
-kubectl --context k3d-host-cluster delete nodeprovider lima-local
-kubectl --context k3d-host-cluster -n vcluster-platform delete secret lima-local-credentials
-./setup.sh stop
+./setup.sh teardown --dry-run
 ```
 
-Adapt these resource names, context, namespace and `--state-dir` for a custom installation. `stop` refuses to stop while managed records remain. It unregisters the macOS service but preserves private files. Remove those files only after confirming cleanup; do not delete another installation's state.
+The command performs cleanup in this order:
+
+1. Checks resource ownership and lists the tenants, claims and mapped VMs to remove.
+2. Requests managed tenant deletion while retaining the template that Platform needs to resolve worker cleanup.
+3. Keeps Platform and the helper available until tenant control-plane namespaces, NodeClaims, ownership records and mapped Lima VMs are gone. Orphan claims for this provider are deleted through Platform's lifecycle.
+4. Removes the template, NodeProvider, generated node types and credential Secret.
+5. Stops the helper and waits for its process to exit.
+6. Removes generated configuration, credentials, certificates, manifests, logs and lab kubeconfigs under the installation's `autoscaling/` directory. Unrecognised local files are preserved.
+
+Platform itself, the host Kubernetes cluster, unrelated tenants and manually managed VMs stay available. Teardown does not bypass finalizers or delete VMs outside the managed helper lifecycle.
+
+### Repeat the installation
+
+After successful teardown, repeat the original commands with the default provider and template names:
+
+```bash
+./setup.sh prepare --platform-host YOUR-PLATFORM-HOSTNAME \
+  --cpus 1 --memory-gib 2 --disk-gib 30 \
+  --max-nodes 4 --pool-nodes 2
+./setup.sh start
+./setup.sh check
+./setup.sh deploy
+```
+
+For a custom private directory, pass the same global `--state-dir` option before `teardown`. See the troubleshooting guide for [inactive legacy resources](troubleshooting.md#remove-inactive-resources-from-an-older-setup), [cleanup failures and timeout settings](troubleshooting.md#teardown-fails-or-times-out) or [missing configuration](troubleshooting.md#teardown-cannot-find-its-configuration).
 
 ## Troubleshooting
 
-- **Preparation cannot find the Platform hostname:** log the CLI into Platform or pass the browser hostname explicitly. Multiple configured hostnames require an explicit choice.
-- **Helper starts with old sizing or limits:** `config_id` detects stale settings. Remove managed workers, stop the helper, prepare again and restart it before redeploying.
-- **Platform cannot reach the helper:** check host networking, the chosen port, the certificate SAN and macOS firewall. `check` requires `sh`, `curl`, `base64` and `mktemp` in the Platform deployment. A successful local probe alone does not prove container-to-Mac connectivity.
-- **An existing provider/template cannot be overwritten:** choose unique names and a separate private directory. Do not remove ownership guards to migrate the prototype's live resources.
-- **NodeClaim stays Provisioning:** inspect Platform events, the private helper logs and guest `/var/log/vcluster-lima-bootstrap.log`. First-boot image downloads and registration can take several minutes. Avoid publishing unredacted logs or registration payloads.
-- **Request returns capacity exhausted:** inspect both managed records and all `vclima-*` VMs in the selected Lima inventory. Missing or failed workers can retain reservations. Retry through Platform or delete the owning tenant; do not erase ownership files while resources remain.
-- **A setup subprocess fails:** output is intentionally withheld because it may contain credentials. Inspect the named operation privately in your local environment. Do not enable REST provider debugging or publish full state files to investigate.
+Use the [scenario index](troubleshooting.md#scenario-index) for setup, connectivity, provisioning, scaling and cleanup issues. Deployment ownership errors are covered in [Resolve existing resource conflicts](troubleshooting.md#resolve-existing-resource-conflicts).
 
 ## Validation record
 
@@ -347,6 +358,26 @@ The smoke test verified the following sequence:
 3. Created a tenant in a project that allowed the template and confirmed one worker reached Kubernetes `Ready`.
 4. Deleted the tenant through Platform and confirmed its ownership record and Lima VM were removed.
 5. Removed the temporary provider resources.
+
+### Full teardown and default-name reinstall
+
+**Test date:** 2026-11-07, on macOS ARM64 with Lima 2.1.0 and vCluster Platform 4.12.4.
+
+The test used provider `lima-local`, template `private-nodes-lima-auto`, 1 CPU / 2Gi workers, a shared cap of four workers and a tenant pool cap of two.
+
+| Check | Observed result |
+| --- | --- |
+| Legacy reset | Inactive legacy template and credential Secret removed through the explicit opt-in. |
+| Fresh default installation | Original provider and template names installed without conflicts. |
+| Live workload | One tenant worker and one nginx replica reached `Ready`. |
+| Preview | Dry run identified the test tenant, claim, VM and installation resources without changing them. |
+| Full teardown | Tenant, host namespace, NodeClaim, mapped VM, ownership record, worker OpenTofu state, template, provider, node type and credential Secret removed. |
+| Local cleanup | Helper stopped; generated private files and exported lab kubeconfig removed. |
+| Repeat installation | Original setup commands installed the default names again successfully. |
+| Repeat cleanup | Final teardown succeeded; another teardown reported no prepared configuration and changed nothing. |
+| Shared environment | Unrelated tenants remained available. |
+
+Platform needs the referenced template while finalizing worker cleanup. Teardown therefore retains the template, provider and credentials until dependent tenants and workers are gone. Cleanup failures retain private configuration so the operation can be retried.
 
 ### Module integration
 

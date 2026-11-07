@@ -188,7 +188,13 @@ Follow [Create a tenant and observe a worker](docs/installation.md#create-a-tena
 
 To explore workload-driven scale-up and worker removal in two independent tenants, follow the [autoscaling example](examples/autoscaling/README.md). It uses one shared provider with a four-worker budget.
 
-Provider deployment does not create a tenant or VM. After testing, follow [Cleanup before removing Platform](docs/installation.md#cleanup-before-removing-platform) to remove workers through their managed lifecycle.
+Provider deployment does not create a tenant or VM. After testing, remove the complete prepared installation with:
+
+```bash
+./setup.sh teardown
+```
+
+Use `./setup.sh teardown --dry-run` to preview the affected resources. See [Cleanup before removing Platform](docs/installation.md#cleanup-before-removing-platform) for cleanup order and reinstallation with the default names. For setup, provisioning, scaling or cleanup issues, use the [troubleshooting scenario index](docs/troubleshooting.md#scenario-index).
 
 ### Optional: run the offline checks
 

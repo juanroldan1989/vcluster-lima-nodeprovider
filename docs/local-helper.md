@@ -63,7 +63,7 @@ The default worker shape is **1 CPU / 2Gi RAM / 30Gi disk**, Ubuntu 22.04 ARM64,
 | 405 | Unsupported method on a managed-node route. |
 | 409 | Capacity exhausted, changed ownership or a conflicting VM/record. |
 | 413 | Missing, empty or oversized request body; the limit is 2MiB. |
-| 502 | A Lima operation failed or timed out; inspect the VM privately. |
+| 502 | A Lima operation failed or timed out. |
 
 Errors omit subprocess output because bootstrap output can contain registration credentials. Unexpected internal failures return a generic 500 response. Some unimplemented HTTP methods are rejected by Python's HTTP server before routing.
 
@@ -71,7 +71,7 @@ Errors omit subprocess output because bootstrap output can contain registration 
 
 Ownership is saved before VM creation. Records contain the ID, VM name, claim, project, tenant, sizing and completion status. Bootstrap payloads are not saved in ownership records. Records use mode `0600` and the state directory uses `0700`.
 
-A retry uses the same record and VM. Failed bootstrap leaves `ready: false` so a subsequent create/update can retry registration. Missing VMs can be recreated on an explicit retry after a read exposes the missing state. There is no independent repair loop and a stopped-but-existing VM is not currently detected as drift.
+A retry uses the same record and VM. Failed bootstrap leaves `ready: false` so a subsequent create/update can retry registration. See the troubleshooting guide for [bootstrap recovery](troubleshooting.md#nodeclaim-stays-provisioning-or-bootstrap-fails) and [missing or stopped VMs](troubleshooting.md#a-managed-vm-is-missing-or-stopped).
 
 The helper counts the union of `vclima-*` VMs and reserved records against `max_nodes`. Unrecorded VMs with that prefix consume capacity but are not automatically adopted or deleted. Unrelated VM names are excluded from this count. A failed operation can retain a reserved slot until it is retried or cleaned up.
 
@@ -117,4 +117,6 @@ Generated script output is redirected to the root-readable guest file `/var/log/
 
 The [installation guide](installation.md) documents the OpenTofu module, Platform resources, private credentials and managed cleanup. The offline checks do not modify Platform objects or live VMs. Run `python3 tests/integration_platform.py` to exercise the real module over TLS against fake Lima; it creates no VMs but requires a provider download and a local listening socket.
 
-The [two-tenant autoscaling example](../examples/autoscaling/README.md) demonstrates the shared budget, worker observations and cleanup. Its [recovery guidance](../examples/autoscaling/README.md#delays-failures-and-interrupted-runs) covers interrupted provisioning and teardown.
+The [two-tenant autoscaling example](../examples/autoscaling/README.md) demonstrates the shared budget, worker observations and cleanup. Use the [troubleshooting scenario index](troubleshooting.md#scenario-index) for helper errors, capacity issues and interrupted operations.
+
+Use `./setup.sh teardown` for complete managed cleanup. It preserves the helper and credentials until its mapped workers are gone, then removes generated local files. See the [teardown guide](installation.md#cleanup-before-removing-platform) for scope and the [troubleshooting guide](troubleshooting.md#teardown-fails-or-times-out) for recovery.
