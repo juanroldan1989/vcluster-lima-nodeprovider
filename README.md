@@ -175,7 +175,8 @@ See the [installation prerequisites](docs/installation.md#prerequisites) for net
 From the repository root:
 
 ```bash
-./setup.sh prepare --platform-host YOUR-PLATFORM-HOSTNAME
+./setup.sh prepare --platform-host YOUR-PLATFORM-HOSTNAME \
+  --max-nodes 4 --pool-nodes 2
 ./setup.sh start
 ./setup.sh check
 ./setup.sh deploy

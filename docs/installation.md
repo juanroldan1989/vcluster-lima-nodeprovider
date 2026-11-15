@@ -35,8 +35,11 @@ You can omit `--platform-host` when `~/.vcluster/config.json` contains exactly o
 ### 2. Prepare the configuration
 
 ```bash
-./setup.sh prepare --platform-host YOUR-PLATFORM-HOSTNAME
+./setup.sh prepare --platform-host YOUR-PLATFORM-HOSTNAME \
+  --max-nodes 4 --pool-nodes 2
 ```
+
+This walkthrough uses four shared worker slots and allows up to two workers per tenant.
 
 This generates the following files under ignored `.local/`:
 
@@ -89,7 +92,8 @@ For another context, namespace or deployment, use:
 ```bash
 ./setup.sh --context MY-HOST-CONTEXT --namespace MY-PLATFORM-NAMESPACE prepare \
   --platform-host YOUR-PLATFORM-HOSTNAME \
-  --deployment MY-PLATFORM-DEPLOYMENT
+  --deployment MY-PLATFORM-DEPLOYMENT \
+  --max-nodes 4 --pool-nodes 2
 ```
 
 Place the global `--context` and `--namespace` options **before** `prepare`. Subsequent commands use the saved values and do not change your current kubeconfig context.
