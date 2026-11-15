@@ -128,17 +128,17 @@ Watch two recorded vCluster Platform workflows. Each video is 60 seconds; provis
 
 Create `lima-demo-a` using the `private-nodes-lima-auto` template, then watch its first Lima worker and system Pods become Ready.
 
-[![Watch tenant creation using the Lima template](docs/videos/create-tenant-poster.png)](docs/videos/create-tenant.mp4)
-
-[▶ Watch Create tenant](docs/videos/create-tenant.mp4)
+https://github.com/user-attachments/assets/342ef4c5-8286-4644-b2a3-942f51c8a2b0
 
 ### Scale a workload and watch workers join
 
-Start with one Ready nginx replica, request two replicas through the CLI, and watch Auto Nodes provision a second Lima worker in Platform. Both replicas finish Ready on separate workers.
+Start with one Ready nginx replica, request two replicas through the CLI and watch Auto Nodes provision a second Lima worker in Platform. Both replicas finish Ready on separate workers.
 
-[![Watch the workload scale onto a second Lima worker](docs/videos/workload-scale-poster.png)](docs/videos/workload-scale.mp4)
 
-[▶ Watch workload and worker scaling](docs/videos/workload-scale.mp4)
+
+https://github.com/user-attachments/assets/ca66eb5f-962a-4839-83c1-bc01e5a6e303
+
+
 
 ### Final CLI view
 
