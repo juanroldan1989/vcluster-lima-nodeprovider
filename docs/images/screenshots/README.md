@@ -1,6 +1,6 @@
 # Screenshot and recording assets
 
-The [illustrated autoscaling walkthrough](../../../examples/autoscaling/README.md) places the captures beside their setup, provisioning, scaling and cleanup steps. The [README showcase](../../../README.md#screenshot-showcase) uses a smaller selection. The catalog describes the visible resource state in each capture.
+The [illustrated autoscaling walkthrough](../../../examples/autoscaling/README.md) places the captures beside their setup, provisioning, scaling and cleanup steps. The [README showcase](../../../README.md#showcase-videos) features tenant creation and worker scaling videos. The catalog describes the visible resource state in each capture.
 
 ## Capture scope
 

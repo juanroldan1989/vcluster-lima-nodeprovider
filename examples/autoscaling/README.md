@@ -382,12 +382,12 @@ The [asset catalog](../../docs/images/screenshots/README.md) describes the scree
 
 | Capture | Additional display locations |
 | --- | --- |
-| Idle / claimed provider | [README showcase](../../README.md#screenshot-showcase), [installation](../../docs/installation.md#4-deploy-the-provider-and-inspect-its-status), [helper lifecycle](../../docs/local-helper.md#platform-integration) |
+| Idle / claimed provider | [Installation](../../docs/installation.md#4-deploy-the-provider-and-inspect-its-status), [helper lifecycle](../../docs/local-helper.md#platform-integration) |
 | Template catalog | [Installation template defaults](../../docs/installation.md#template-defaults) |
 | Dynamic pool configuration | [Type-selector troubleshooting](../../docs/troubleshooting.md#instance-type-not-found) |
 | Baseline worker | [Installation worker readiness](../../docs/installation.md#4-confirm-readiness-inside-the-tenant) |
-| Ready Pods and VM inventories | [README showcase](../../README.md#screenshot-showcase), [validation record](../../docs/autoscaling-validation.md#screenshot-references) |
-| Teardown recording | [README showcase](../../README.md#screenshot-showcase), [installation cleanup](../../docs/installation.md#cleanup-before-removing-platform) |
+| Ready Pods and VM inventories | [README CLI view](../../README.md#final-cli-view), [validation record](../../docs/autoscaling-validation.md#screenshot-references) |
+| Teardown recording | [Installation cleanup](../../docs/installation.md#cleanup-before-removing-platform) |
 
 ## Troubleshooting
 

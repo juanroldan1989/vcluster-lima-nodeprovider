@@ -11,7 +11,7 @@ A community Lima NodeProvider for vCluster Platform that dynamically provisions 
 [![lint](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/lint.yml)
 [![security](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/juanroldan1989/vcluster-lima-nodeprovider/actions/workflows/security.yml)
 
-[Goals](#goals) · [Architecture](#architecture) · [Autoscaling example](examples/autoscaling/README.md) · [Screenshots](#screenshot-showcase) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Goals](#goals) · [Architecture](#architecture) · [Autoscaling example](examples/autoscaling/README.md) · [Showcase videos](#showcase-videos) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 <a name="project-status"></a>
 
@@ -118,27 +118,41 @@ flowchart TB
     platform -->|Authenticated HTTPS| local
 ```
 
-<a name="screenshot-showcase"></a>
+<a name="showcase-videos"></a>
 
-## 📸 Screenshot showcase
+## 🎬 Showcase videos
 
-See the provider, workload placement and automatic VM removal in action. The [walkthrough](examples/autoscaling/README.md) includes creation, provisioning, scale-up, scale-down and cleanup checkpoints.
+Watch two recorded vCluster Platform workflows. Each video is 60 seconds; provisioning waits have been shortened.
 
-![Lima provider with one claimed worker and three available slots](docs/images/screenshots/lima-node-provider-shows-1-node-claimed-for-tenant-a.png)
+### Create a tenant
 
-*One Lima worker is claimed and three of the four shared slots remain available. The expanded row identifies the provider-qualified worker type.*
+Create `lima-demo-a` using the `private-nodes-lima-auto` template, then watch its first Lima worker and system Pods become Ready.
 
-![Two Ready nginx Pods placed on distinct Lima workers](docs/images/screenshots/lima-demo-a-tenant-second-pod-scheduled-in-new-node.png)
+[![Watch tenant creation using the Lima template](docs/videos/create-tenant-poster.png)](docs/videos/create-tenant.mp4)
 
-*Both nginx replicas are Running and Ready. Their Node column values confirm that each replica uses a different worker.*
+[▶ Watch Create tenant](docs/videos/create-tenant.mp4)
 
-![Lima inventory with one Running VM after scale-down](docs/images/screenshots/limactl-list-shows-one-vm-running-for-tenant-a-after-scale-down.png)
+### Scale a workload and watch workers join
 
-*After scale-down, one Lima worker VM remains Running with 1 CPU, 2GiB RAM and a 30GiB virtual disk.*
+Start with one Ready nginx replica, request two replicas through the CLI, and watch Auto Nodes provision a second Lima worker in Platform. Both replicas finish Ready on separate workers.
 
-[![Watch the Lima provider disappear during teardown](docs/images/screenshots/lima-node-provider-teardown-poster.png)](docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mp4)
+[![Watch the workload scale onto a second Lima worker](docs/videos/workload-scale-poster.png)](docs/videos/workload-scale.mp4)
 
-*Watch the 4.2-second recording: the idle provider disappears from Nodes & Providers during full installation teardown. [Open MP4](docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mp4) · [Original MOV](docs/images/screenshots/lima-node-provider-removed-by-teardown-script.mov).*
+[▶ Watch workload and worker scaling](docs/videos/workload-scale.mp4)
+
+### Final CLI view
+
+Inspect the provisioned Lima VMs after scale-up:
+
+```bash
+limactl list
+```
+
+![CLI view showing two provisioned Lima worker VMs Running](docs/images/screenshots/limactl-list-shows-both-vms-running-for-tenant-a.png)
+
+*Two Lima worker VMs are Running, each with 1 CPU, 2GiB RAM and a 30GiB virtual disk.*
+
+Follow the [autoscaling walkthrough](examples/autoscaling/README.md) to reproduce the workload setup, scale-up, scale-down and cleanup.
 
 <a name="getting-started"></a>
 
