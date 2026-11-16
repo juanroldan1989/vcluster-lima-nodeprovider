@@ -122,6 +122,14 @@ flowchart TB
 
 ## 🎬 Showcase videos
 
+**This project fills the blue “Node Manager (or Cloud Provider)” role below, using Lima VMs on your Mac.**
+
+vCluster Auto Nodes (Karpenter) decides when more worker capacity is needed.
+
+Platform then uses this provider to create Lima VMs and join them as tenant workers. When Auto Nodes retires a worker, the provider removes its VM.
+
+![vCluster Auto Nodes and Karpenter flow showing the node manager provisioning tenant workers](docs/images/vcluster-autonodes-karpenter.png)
+
 Watch two recorded vCluster Platform workflows. Each video is 60 seconds; provisioning waits have been shortened.
 
 ### Create a tenant
@@ -134,11 +142,7 @@ https://github.com/user-attachments/assets/342ef4c5-8286-4644-b2a3-942f51c8a2b0
 
 Start with one Ready nginx replica, request two replicas through the CLI and watch Auto Nodes provision a second Lima worker in Platform. Both replicas finish Ready on separate workers.
 
-
-
 https://github.com/user-attachments/assets/ca66eb5f-962a-4839-83c1-bc01e5a6e303
-
-
 
 ### Final CLI view
 
